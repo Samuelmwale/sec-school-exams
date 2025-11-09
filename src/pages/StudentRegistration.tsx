@@ -21,22 +21,48 @@ export default function StudentRegistration() {
     setLoading(true);
 
     try {
-      // Find student registration by name (case-insensitive) and registration number (exact match)
-      const { data: registration, error: regError } = await supabase
-        .from("student_registrations")
-        .select("*")
+      // Find student by name (case-insensitive) and student_id (from students table)
+      const { data: students, error: studentError } = await supabase
+        .from("students" as any)
+        .select("*, school_id")
         .ilike("name", formData.name.trim())
-        .eq("registration_number", formData.studentId.trim())
-        .maybeSingle();
+        .eq("student_id", formData.studentId.trim()) as any;
 
-      if (regError || !registration) {
+      if (studentError || !students || students.length === 0) {
         toast.error("Invalid name or student ID. Please check your credentials.");
         setLoading(false);
         return;
       }
 
-      // Store registration info in session
-      sessionStorage.setItem("student_registration", JSON.stringify(registration));
+      const student = students[0];
+
+      // Get school info
+      const { data: school } = await supabase
+        .from("schools" as any)
+        .select("*")
+        .eq("id", student.school_id)
+        .single() as any;
+
+      if (!school) {
+        toast.error("School not found");
+        setLoading(false);
+        return;
+      }
+
+      // Check school subscription
+      if (school.subscription_expiry) {
+        const expiry = new Date(school.subscription_expiry);
+        if (expiry < new Date()) {
+          toast.error("School subscription has expired. Contact school administration.");
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Store student and school info in session
+      sessionStorage.setItem("student_data", JSON.stringify(student));
+      sessionStorage.setItem("school_data", JSON.stringify(school));
+      
       toast.success("Welcome back!");
       navigate("/student-portal");
     } catch (error: any) {
@@ -72,10 +98,10 @@ export default function StudentRegistration() {
               />
             </div>
             <div>
-              <Label htmlFor="studentId">Registration Number</Label>
+              <Label htmlFor="studentId">Student ID</Label>
               <Input
                 id="studentId"
-                placeholder="2025-Form1-001"
+                placeholder="2025-0001"
                 value={formData.studentId}
                 onChange={(e) => setFormData({ ...formData, studentId: e.target.value.trim() })}
                 required

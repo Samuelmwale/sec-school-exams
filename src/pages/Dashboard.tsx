@@ -3,41 +3,65 @@ import { BarChart3, Users, FileText, Settings as SettingsIcon, AlertCircle, Doll
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { storageHelper } from "@/lib/storage";
 import { useEffect, useState } from "react";
+import { SchoolHeader } from "@/components/SchoolHeader";
+import { useSubscription } from "@/hooks/useSubscription";
+import { supabase } from "@/integrations/supabase/client";
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const [settings, setSettings] = useState(storageHelper.getSettings());
   const [studentCount, setStudentCount] = useState(0);
-  const [isExpired, setIsExpired] = useState(false);
+  const { isActive, expiryDate, loading: subscriptionLoading } = useSubscription();
+  const [school, setSchool] = useState<any>(null);
 
   useEffect(() => {
-    const students = storageHelper.getStudents();
-    setStudentCount(students.length);
-
-    const settings = storageHelper.getSettings();
-    const expired = settings.subscriptionExpiry ? Date.now() > settings.subscriptionExpiry : true;
-    setIsExpired(expired);
+    loadDashboardData();
   }, []);
 
-  return (
-    <div className="min-h-screen bg-background pt-16">
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center mb-12 animate-fade-in">
-          <h1 className="text-4xl font-bold text-primary mb-2">{settings.schoolName}</h1>
-          <p className="text-muted-foreground">{settings.schoolAddress}</p>
-          <div className="mt-4 inline-block bg-primary/10 rounded-lg px-6 py-3">
-            <p className="text-lg font-semibold text-primary">Results Management System</p>
-          </div>
-        </div>
+  const loadDashboardData = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-        {isExpired && (
+      // Get user's school
+      const { data: profile } = await supabase
+        .from("profiles" as any)
+        .select("school_id")
+        .eq("id", user.id)
+        .single() as any;
+
+      if (profile?.school_id) {
+        const { data: schoolData } = await supabase
+          .from("schools" as any)
+          .select("*")
+          .eq("id", profile.school_id)
+          .single() as any;
+
+        setSchool(schoolData);
+
+        // Count students in this school
+        const { count } = await supabase
+          .from("students" as any)
+          .select("*", { count: "exact", head: true })
+          .eq("school_id", profile.school_id) as any;
+
+        setStudentCount(count || 0);
+      }
+    } catch (error) {
+      console.error("Error loading dashboard:", error);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-background">
+      <SchoolHeader />
+      <div className="container mx-auto px-4 py-8">
+        {!subscriptionLoading && !isActive && (
           <Alert className="mb-6 border-destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription className="text-destructive font-semibold">
-              Your subscription has expired. You can view existing data but cannot add, edit, or delete records. 
-              Contact <strong>0880425220</strong> to reactivate.
+              Your school subscription has expired. You can view existing data but cannot add, edit, or delete records. 
+              Contact support to reactivate.
             </AlertDescription>
           </Alert>
         )}
@@ -60,8 +84,8 @@ const Dashboard = () => {
               <BarChart3 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className={`text-2xl font-bold ${isExpired ? "text-destructive" : "text-secondary"}`}>
-                {isExpired ? "Expired" : "Active"}
+              <div className={`text-2xl font-bold ${!isActive ? "text-destructive" : "text-secondary"}`}>
+                {isActive ? "Active" : "Expired"}
               </div>
               <p className="text-xs text-muted-foreground">Subscription status</p>
             </CardContent>
@@ -78,7 +102,7 @@ const Dashboard = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button className="w-full">
+              <Button className="w-full" disabled={!isActive}>
                 Go to Admin Panel
               </Button>
             </CardContent>
@@ -108,7 +132,7 @@ const Dashboard = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button className="w-full">
+              <Button className="w-full" disabled={!isActive}>
                 Manage Fees
               </Button>
             </CardContent>
@@ -134,7 +158,7 @@ const Dashboard = () => {
               <Users className="h-12 w-12 text-primary mb-4" />
               <CardTitle>Student Portal</CardTitle>
               <CardDescription>
-                Students can register and view their results
+                Students can login and view their results
               </CardDescription>
             </CardHeader>
             <CardContent>

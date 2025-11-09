@@ -25,6 +25,14 @@ const SchoolRegistration = () => {
     setLoading(true);
 
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast.error("You must be logged in to register a school");
+        navigate("/auth");
+        return;
+      }
+
       // Create school
       const { data: school, error: schoolError } = await supabase
         .from("schools" as any)
@@ -44,29 +52,26 @@ const SchoolRegistration = () => {
       if (schoolError) throw schoolError;
 
       // Update user profile with school_id
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { error: profileError } = await supabase
-          .from("profiles")
-          .update({ school_id: school.id } as any)
-          .eq("id", user.id);
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .update({ school_id: school.id } as any)
+        .eq("id", user.id);
 
-        if (profileError) throw profileError;
+      if (profileError) throw profileError;
 
-        // Create admin role for this user
-        const { error: roleError } = await supabase
-          .from("user_roles")
-          .insert([{
-            user_id: user.id,
-            role: "admin",
-          }]);
+      // Create admin role for this user
+      const { error: roleError } = await supabase
+        .from("user_roles")
+        .insert([{
+          user_id: user.id,
+          role: "admin",
+        }]);
 
-        if (roleError && !roleError.message.includes("duplicate")) {
-          throw roleError;
-        }
+      if (roleError && !roleError.message.includes("duplicate")) {
+        throw roleError;
       }
 
-      toast.success("School registered successfully!");
+      toast.success("School registered successfully! You get a 30-day free trial.");
       navigate("/dashboard");
     } catch (error: any) {
       console.error("Registration error:", error);

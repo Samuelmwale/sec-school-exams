@@ -6,12 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { SUBJECTS, SubjectKey, CLASS_FORMS, TERMS } from "@/lib/grading";
 import { exportToPDF, exportToWord } from "@/lib/exports";
-import { storageHelper } from "@/lib/storage";
 import { Student } from "@/types/student";
 import { Download, FileText, LogOut, DollarSign, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
@@ -26,10 +22,16 @@ interface Invoice {
   year: string;
 }
 
+interface School {
+  id: string;
+  school_name: string;
+  address: string;
+}
+
 const StudentPortal = () => {
   const navigate = useNavigate();
-  const [user, setUser] = useState<any>(null);
-  const [registration, setRegistration] = useState<any>(null);
+  const [student, setStudent] = useState<any>(null);
+  const [school, setSchool] = useState<School | null>(null);
   const [studentRecords, setStudentRecords] = useState<Student[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [selectedClass, setSelectedClass] = useState<string>("all");
@@ -43,29 +45,33 @@ const StudentPortal = () => {
 
   const checkAuth = async () => {
     try {
-      // Check sessionStorage for student registration
-      const storedRegistration = sessionStorage.getItem("student_registration");
+      // Check sessionStorage for student data
+      const storedStudent = sessionStorage.getItem("student_data");
+      const storedSchool = sessionStorage.getItem("school_data");
       
-      if (!storedRegistration) {
+      if (!storedStudent || !storedSchool) {
         navigate("/student-registration");
         return;
       }
 
-      const regData = JSON.parse(storedRegistration);
-      setRegistration(regData);
-      setUser({ id: regData.id });
+      const studentData = JSON.parse(storedStudent);
+      const schoolData = JSON.parse(storedSchool);
+      
+      setStudent(studentData);
+      setSchool(schoolData);
 
-      // Get student records
+      // Get student records from database
       const { data: students } = await supabase
-        .from('students')
+        .from('students' as any)
         .select('*')
-        .eq('name', regData.name)
-        .eq('sex', regData.sex)
+        .eq('name', studentData.name)
+        .eq('student_id', studentData.student_id)
+        .eq('school_id', schoolData.id)
         .order('year', { ascending: false })
-        .order('term', { ascending: false });
+        .order('term', { ascending: false }) as any;
 
       if (students) {
-        const mappedStudents = students.map(s => ({
+        const mappedStudents = students.map((s: any) => ({
           id: s.student_id,
           name: s.name,
           sex: s.sex as 'M' | 'F',
@@ -82,13 +88,14 @@ const StudentPortal = () => {
         setStudentRecords(mappedStudents);
       }
 
-      // Get invoices and set up real-time subscription
+      // Get invoices
       const loadInvoices = async () => {
         const { data: invoicesData } = await supabase
-          .from('student_invoices')
+          .from('student_invoices' as any)
           .select('*')
-          .eq('registration_number', regData.registration_number)
-          .order('due_date', { ascending: true });
+          .eq('registration_number', studentData.student_id)
+          .eq('school_id', schoolData.id)
+          .order('due_date', { ascending: true }) as any;
 
         if (invoicesData) {
           setInvoices(invoicesData);
@@ -106,7 +113,7 @@ const StudentPortal = () => {
             event: '*',
             schema: 'public',
             table: 'student_invoices',
-            filter: `registration_number=eq.${regData.registration_number}`
+            filter: `registration_number=eq.${studentData.student_id}`
           },
           () => {
             loadInvoices();
@@ -126,15 +133,20 @@ const StudentPortal = () => {
   };
 
   const handleLogout = () => {
-    sessionStorage.removeItem("student_registration");
+    sessionStorage.removeItem("student_data");
+    sessionStorage.removeItem("school_data");
     navigate("/student-registration");
   };
 
 
   const handleDownloadPDF = () => {
     const recordsToExport = getFilteredRecords();
-    if (recordsToExport.length > 0) {
-      const settings = storageHelper.getSettings();
+    if (recordsToExport.length > 0 && school) {
+      const settings = {
+        schoolName: school.school_name,
+        schoolAddress: school.address,
+        subscriptionExpiry: null,
+      };
       exportToPDF(recordsToExport, settings);
       toast.success("PDF downloaded successfully!");
     }
@@ -142,8 +154,12 @@ const StudentPortal = () => {
 
   const handleDownloadWord = async () => {
     const recordsToExport = getFilteredRecords();
-    if (recordsToExport.length > 0) {
-      const settings = storageHelper.getSettings();
+    if (recordsToExport.length > 0 && school) {
+      const settings = {
+        schoolName: school.school_name,
+        schoolAddress: school.address,
+        subscriptionExpiry: null,
+      };
       await exportToWord(recordsToExport, settings);
       toast.success("Word document opened!");
     }
@@ -183,13 +199,26 @@ const StudentPortal = () => {
   const hasUnpaidInvoices = invoices.some(inv => inv.status === 'pending' || inv.status === 'overdue');
 
   return (
-    <div className="min-h-screen bg-background pt-16 pb-8">
-      <div className="container mx-auto px-4">
+    <div className="min-h-screen bg-background pb-8">
+      {school && (
+        <div className="bg-primary/5 border-b border-border py-4">
+          <div className="container mx-auto px-4 text-center">
+            <h1 className="text-2xl md:text-3xl font-bold text-primary mb-1">
+              {school.school_name}
+            </h1>
+            <p className="text-sm md:text-base text-muted-foreground">
+              {school.address}
+            </p>
+          </div>
+        </div>
+      )}
+      
+      <div className="container mx-auto px-4 pt-8">
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-3xl font-bold text-primary">Student Portal</h1>
             <p className="text-muted-foreground">
-              {registration?.name} - {registration?.registration_number}
+              {student?.name} - {student?.student_id}
             </p>
           </div>
           <Button variant="outline" onClick={handleLogout}>
