@@ -146,6 +146,8 @@ const StudentPortal = () => {
         schoolName: school.school_name,
         schoolAddress: school.address,
         subscriptionExpiry: null,
+        subscriptionDays: 30,
+        adminKey: "1111"
       };
       exportToPDF(recordsToExport, settings);
       toast.success("PDF downloaded successfully!");
@@ -159,6 +161,8 @@ const StudentPortal = () => {
         schoolName: school.school_name,
         schoolAddress: school.address,
         subscriptionExpiry: null,
+        subscriptionDays: 30,
+        adminKey: "1111"
       };
       await exportToWord(recordsToExport, settings);
       toast.success("Word document opened!");

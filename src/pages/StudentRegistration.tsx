@@ -23,10 +23,10 @@ export default function StudentRegistration() {
     try {
       // Find student by name (case-insensitive) and student_id (from students table)
       const { data: students, error: studentError } = await supabase
-        .from("students" as any)
+        .from("students")
         .select("*, school_id")
         .ilike("name", formData.name.trim())
-        .eq("student_id", formData.studentId.trim()) as any;
+        .eq("student_id", formData.studentId.trim());
 
       if (studentError || !students || students.length === 0) {
         toast.error("Invalid name or student ID. Please check your credentials.");
@@ -38,10 +38,10 @@ export default function StudentRegistration() {
 
       // Get school info
       const { data: school } = await supabase
-        .from("schools" as any)
+        .from("schools")
         .select("*")
         .eq("id", student.school_id)
-        .single() as any;
+        .single();
 
       if (!school) {
         toast.error("School not found");

@@ -14,16 +14,415 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      payments: {
+        Row: {
+          amount: number
+          created_at: string | null
+          id: string
+          invoice_id: string | null
+          paid_at: string | null
+          paid_by: string | null
+          payment_method: string
+          payment_reference: string | null
+          registration_number: string
+          school_id: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          id?: string
+          invoice_id?: string | null
+          paid_at?: string | null
+          paid_by?: string | null
+          payment_method: string
+          payment_reference?: string | null
+          registration_number: string
+          school_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          id?: string
+          invoice_id?: string | null
+          paid_at?: string | null
+          paid_by?: string | null
+          payment_method?: string
+          payment_reference?: string | null
+          registration_number?: string
+          school_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "student_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          phone_number: string | null
+          role: string
+          school_id: string | null
+          sex: string
+          student_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id: string
+          name: string
+          phone_number?: string | null
+          role?: string
+          school_id?: string | null
+          sex: string
+          student_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          phone_number?: string | null
+          role?: string
+          school_id?: string | null
+          sex?: string
+          student_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      school_fees: {
+        Row: {
+          class_form: string
+          created_at: string | null
+          id: string
+          installments: number
+          term: string
+          total_amount: number
+          updated_at: string | null
+          year: string
+        }
+        Insert: {
+          class_form: string
+          created_at?: string | null
+          id?: string
+          installments?: number
+          term: string
+          total_amount: number
+          updated_at?: string | null
+          year: string
+        }
+        Update: {
+          class_form?: string
+          created_at?: string | null
+          id?: string
+          installments?: number
+          term?: string
+          total_amount?: number
+          updated_at?: string | null
+          year?: string
+        }
+        Relationships: []
+      }
+      school_settings: {
+        Row: {
+          created_at: string | null
+          id: string
+          school_address: string
+          school_name: string
+          subscription_days: number
+          subscription_expiry: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          school_address?: string
+          school_name?: string
+          subscription_days?: number
+          subscription_expiry?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          school_address?: string
+          school_name?: string
+          subscription_days?: number
+          subscription_expiry?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      schools: {
+        Row: {
+          address: string
+          center_number: string
+          created_at: string | null
+          district_name: string | null
+          division_name: string | null
+          id: string
+          is_active: boolean
+          school_name: string
+          subscription_expiry: string | null
+          updated_at: string | null
+          zone_name: string | null
+        }
+        Insert: {
+          address: string
+          center_number: string
+          created_at?: string | null
+          district_name?: string | null
+          division_name?: string | null
+          id?: string
+          is_active?: boolean
+          school_name: string
+          subscription_expiry?: string | null
+          updated_at?: string | null
+          zone_name?: string | null
+        }
+        Update: {
+          address?: string
+          center_number?: string
+          created_at?: string | null
+          district_name?: string | null
+          division_name?: string | null
+          id?: string
+          is_active?: boolean
+          school_name?: string
+          subscription_expiry?: string | null
+          updated_at?: string | null
+          zone_name?: string | null
+        }
+        Relationships: []
+      }
+      student_invoices: {
+        Row: {
+          amount: number
+          class_form: string
+          created_at: string | null
+          due_date: string | null
+          id: string
+          installment_number: number
+          registration_number: string
+          school_id: string | null
+          status: string
+          term: string
+          updated_at: string | null
+          year: string
+        }
+        Insert: {
+          amount: number
+          class_form: string
+          created_at?: string | null
+          due_date?: string | null
+          id?: string
+          installment_number: number
+          registration_number: string
+          school_id?: string | null
+          status?: string
+          term: string
+          updated_at?: string | null
+          year: string
+        }
+        Update: {
+          amount?: number
+          class_form?: string
+          created_at?: string | null
+          due_date?: string | null
+          id?: string
+          installment_number?: number
+          registration_number?: string
+          school_id?: string | null
+          status?: string
+          term?: string
+          updated_at?: string | null
+          year?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_invoices_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_registrations: {
+        Row: {
+          class_form: string
+          created_at: string | null
+          id: string
+          name: string
+          phone_number: string | null
+          registration_number: string
+          school_id: string | null
+          sex: string
+          updated_at: string | null
+          user_id: string | null
+          year: string
+        }
+        Insert: {
+          class_form: string
+          created_at?: string | null
+          id?: string
+          name: string
+          phone_number?: string | null
+          registration_number: string
+          school_id?: string | null
+          sex: string
+          updated_at?: string | null
+          user_id?: string | null
+          year: string
+        }
+        Update: {
+          class_form?: string
+          created_at?: string | null
+          id?: string
+          name?: string
+          phone_number?: string | null
+          registration_number?: string
+          school_id?: string | null
+          sex?: string
+          updated_at?: string | null
+          user_id?: string | null
+          year?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_registrations_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      students: {
+        Row: {
+          class_form: string
+          created_at: string | null
+          grades: Json
+          id: string
+          marks: Json
+          name: string
+          rank: number | null
+          school_id: string | null
+          sex: string
+          status: string
+          student_id: string | null
+          term: string
+          total: number
+          updated_at: string | null
+          year: string
+        }
+        Insert: {
+          class_form: string
+          created_at?: string | null
+          grades?: Json
+          id?: string
+          marks?: Json
+          name: string
+          rank?: number | null
+          school_id?: string | null
+          sex: string
+          status: string
+          student_id?: string | null
+          term: string
+          total?: number
+          updated_at?: string | null
+          year: string
+        }
+        Update: {
+          class_form?: string
+          created_at?: string | null
+          grades?: Json
+          id?: string
+          marks?: Json
+          name?: string
+          rank?: number | null
+          school_id?: string | null
+          sex?: string
+          status?: string
+          student_id?: string | null
+          term?: string
+          total?: number
+          updated_at?: string | null
+          year?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "students_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      generate_registration_number: {
+        Args: { p_class_form: string; p_year: string }
+        Returns: string
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      mark_overdue_invoices: { Args: never; Returns: undefined }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "student"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +549,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "student"],
+    },
   },
 } as const

@@ -107,8 +107,14 @@ export const determineStatus = (marks: SubjectMarks): "PASS" | "FAIL" => {
 };
 
 export const calculateRanks = (students: Student[]): Student[] => {
-  // Sort by total descending
-  const sorted = [...students].sort((a, b) => b.total - a.total);
+  // Recalculate totals for all students (they may be outdated)
+  const studentsWithRecalcTotal = students.map(s => ({
+    ...s,
+    total: calculateTotal(s.marks)
+  }));
+  
+  // Sort by total descending (based on best 6 subjects)
+  const sorted = [...studentsWithRecalcTotal].sort((a, b) => b.total - a.total);
 
   // Dense ranking
   let currentRank = 1;

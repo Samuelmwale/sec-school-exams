@@ -22,19 +22,19 @@ export const SchoolHeader = () => {
 
       // Get user profile with school
       const { data: profile } = await supabase
-        .from("profiles" as any)
+        .from("profiles")
         .select("school_id")
         .eq("id", user.id)
-        .single() as any;
+        .single();
 
       if (!profile?.school_id) return;
 
       // Get school details  
       const { data: schoolData } = await supabase
-        .from("schools" as any)
+        .from("schools")
         .select("id, school_name, address")
         .eq("id", profile.school_id)
-        .single() as any;
+        .single();
 
       if (schoolData) {
         setSchool(schoolData);
