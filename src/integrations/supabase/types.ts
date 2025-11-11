@@ -420,6 +420,17 @@ export type Database = {
         Returns: boolean
       }
       mark_overdue_invoices: { Args: never; Returns: undefined }
+      register_school: {
+        Args: {
+          p_address: string
+          p_center_number: string
+          p_district_name: string
+          p_division_name: string
+          p_school_name: string
+          p_zone_name: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       app_role: "admin" | "student"

@@ -33,43 +33,17 @@ const SchoolRegistration = () => {
         return;
       }
 
-      // Create school
-      const { data: school, error: schoolError } = await supabase
-        .from("schools" as any)
-        .insert([{
-          school_name: formData.schoolName,
-          center_number: formData.centerNumber,
-          division_name: formData.divisionName,
-          zone_name: formData.zoneName,
-          district_name: formData.districtName,
-          address: formData.address,
-          is_active: true,
-          subscription_expiry: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days trial
-        }])
-        .select()
-        .single() as any;
+      // Register school via backend function (bypasses RLS safely)
+      const { data: schoolId, error: regError } = await supabase.rpc('register_school', {
+        p_school_name: formData.schoolName,
+        p_center_number: formData.centerNumber,
+        p_division_name: formData.divisionName,
+        p_zone_name: formData.zoneName,
+        p_district_name: formData.districtName,
+        p_address: formData.address,
+      });
 
-      if (schoolError) throw schoolError;
-
-      // Update user profile with school_id
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .update({ school_id: school.id } as any)
-        .eq("id", user.id);
-
-      if (profileError) throw profileError;
-
-      // Create admin role for this user
-      const { error: roleError } = await supabase
-        .from("user_roles")
-        .insert([{
-          user_id: user.id,
-          role: "admin",
-        }]);
-
-      if (roleError && !roleError.message.includes("duplicate")) {
-        throw roleError;
-      }
+      if (regError) throw regError;
 
       toast.success("School registered successfully! You get a 30-day free trial.");
       navigate("/dashboard");
