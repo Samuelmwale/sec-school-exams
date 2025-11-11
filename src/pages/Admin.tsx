@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { AlertCircle } from "lucide-react";
 import { ArrowLeft, Plus, Pencil, Trash2, FileDown, FileText } from "lucide-react";
+import { SystemProtection } from "@/components/SystemProtection";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -18,7 +18,6 @@ import { toast } from "sonner";
 
 const Admin = () => {
   const navigate = useNavigate();
-  const [isSubscriptionValid, setIsSubscriptionValid] = useState(true);
   const [students, setStudents] = useState<Student[]>([]);
   const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -27,12 +26,6 @@ const Admin = () => {
   const [uploadMode, setUploadMode] = useState<"append" | "replace">("append");
 
   useEffect(() => {
-    // Check subscription status but load data regardless
-    const settings = storageHelper.getSettings();
-    const isExpired = !settings.subscriptionExpiry || Date.now() > settings.subscriptionExpiry;
-    setIsSubscriptionValid(!isExpired);
-    
-    // Always load data, even if subscription expired
     loadStudents();
   }, []);
 
@@ -56,10 +49,6 @@ const Admin = () => {
   };
 
   const handleSave = (studentData: Omit<Student, "id" | "grades" | "total" | "average" | "rank" | "status">) => {
-    if (!isSubscriptionValid) {
-      toast.error("Subscription expired. Contact 0880425220 to reactivate.");
-      return;
-    }
     let updatedStudents = [...students];
     if (editStudent) {
       updatedStudents = updatedStudents.map((s) => (s.id === editStudent.id ? { ...s, ...studentData } : s));
@@ -75,10 +64,6 @@ const Admin = () => {
   };
 
   const handleDelete = (id: string) => {
-    if (!isSubscriptionValid) {
-      toast.error("Subscription expired. Contact 0880425220 to reactivate.");
-      return;
-    }
     const updated = students.filter((s) => s.id !== id);
     const processed = processStudentData(updated);
     storageHelper.saveStudents(processed);
@@ -87,11 +72,7 @@ const Admin = () => {
   };
 
   const handleUpload = (uploadedStudents: Omit<Student, "id" | "grades" | "total" | "average" | "rank" | "status">[]) => {
-    if (!isSubscriptionValid) {
-      toast.error("Subscription expired. Contact 0880425220 to reactivate.");
-      return;
-    }
-    let updatedStudents = uploadMode === "replace" 
+    let updatedStudents = uploadMode === "replace"
       ? students.filter((s) => !(s.classForm === filter.classForm && s.year === filter.year && s.term === filter.term))
       : [...students];
     
@@ -105,25 +86,14 @@ const Admin = () => {
 
 
   return (
-    <div className="min-h-screen bg-background pt-16 pb-8">
-      <div className="container mx-auto px-4">
+    <SystemProtection>
+      <div className="min-h-screen bg-background pt-16 pb-8">
+        <div className="container mx-auto px-4">
         <Button variant="ghost" onClick={() => navigate("/")} className="mb-4">
           <ArrowLeft className="mr-2 h-4 w-4" />Back
         </Button>
 
         <h1 className="text-3xl font-bold text-primary mb-6">Admin Panel</h1>
-
-        {!isSubscriptionValid && (
-          <Card className="p-4 mb-6 border-destructive">
-            <div className="flex items-center gap-2 text-destructive">
-              <AlertCircle className="h-5 w-5" />
-              <p className="font-semibold">Subscription Expired - View Only Mode</p>
-            </div>
-            <p className="text-sm text-muted-foreground mt-2">
-              You can view existing data but cannot add, edit, or delete records. Contact <strong>0880425220</strong> to reactivate.
-            </p>
-          </Card>
-        )}
 
         <Card className="p-6 mb-6">
           <div className="grid md:grid-cols-4 gap-4 mb-4">
@@ -160,11 +130,11 @@ const Admin = () => {
             </div>
           </div>
 
-          <ExcelUploader onUpload={handleUpload} uploadMode={uploadMode} onModeChange={setUploadMode} classForm={filter.classForm} year={filter.year} term={filter.term} disabled={!isSubscriptionValid} />
+          <ExcelUploader onUpload={handleUpload} uploadMode={uploadMode} onModeChange={setUploadMode} classForm={filter.classForm} year={filter.year} term={filter.term} disabled={false} />
         </Card>
 
         <div className="flex gap-2 mb-4">
-          <Button onClick={() => { setEditStudent(undefined); setShowForm(true); }} disabled={!isSubscriptionValid}>
+          <Button onClick={() => { setEditStudent(undefined); setShowForm(true); }}>
             <Plus className="mr-2 h-4 w-4" />Add Student
           </Button>
           <Button variant="secondary" onClick={() => exportToExcel(filteredStudents, `${filter.classForm}_${filter.year}_${filter.term}.xlsx`)}>
@@ -221,10 +191,10 @@ const Admin = () => {
                   <TableCell><span className={s.status === "PASS" ? "text-secondary font-semibold" : "text-destructive"}>{s.status}</span></TableCell>
                   <TableCell>
                     <div className="flex gap-1">
-                      <Button size="sm" variant="ghost" onClick={() => { setEditStudent(s); setShowForm(true); }} disabled={!isSubscriptionValid}>
+                      <Button size="sm" variant="ghost" onClick={() => { setEditStudent(s); setShowForm(true); }}>
                         <Pencil className="h-3 w-3" />
                       </Button>
-                      <Button size="sm" variant="ghost" onClick={() => handleDelete(s.id)} disabled={!isSubscriptionValid}>
+                      <Button size="sm" variant="ghost" onClick={() => handleDelete(s.id)}>
                         <Trash2 className="h-3 w-3" />
                       </Button>
                     </div>
@@ -236,8 +206,9 @@ const Admin = () => {
         </Card>
 
         <StudentForm open={showForm} onClose={() => { setShowForm(false); setEditStudent(undefined); }} onSave={handleSave} student={editStudent} />
+        </div>
       </div>
-    </div>
+    </SystemProtection>
   );
 };
 

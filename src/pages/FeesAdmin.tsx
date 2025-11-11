@@ -5,19 +5,21 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FeesManagement } from "@/components/FeesManagement";
 import { PaymentManagement } from "@/components/PaymentManagement";
 import { PasswordProtection } from "@/components/PasswordProtection";
+import { SystemProtection } from "@/components/SystemProtection";
 
 const FeesAdmin = () => {
   const navigate = useNavigate();
 
   return (
-    <PasswordProtection
-      requiredPassword="1122"
-      title="Fees Management Access"
-      description="Enter password to access fees management"
-      storageKey="fees_admin_auth"
-    >
-      <div className="min-h-screen bg-background pt-16 pb-8">
-        <div className="container mx-auto px-4">
+    <SystemProtection>
+      <PasswordProtection
+        requiredPassword="1122"
+        title="Fees Management Access"
+        description="Enter password to access fees management"
+        storageKey="fees_admin_auth"
+      >
+        <div className="min-h-screen bg-background pt-16 pb-8">
+          <div className="container mx-auto px-4">
           <div className="mb-6">
             <Button variant="ghost" onClick={() => navigate("/")}>
               <ArrowLeft className="mr-2 h-4 w-4" />
@@ -41,9 +43,10 @@ const FeesAdmin = () => {
               <PaymentManagement />
             </TabsContent>
           </Tabs>
+          </div>
         </div>
-      </div>
-    </PasswordProtection>
+      </PasswordProtection>
+    </SystemProtection>
   );
 };
 

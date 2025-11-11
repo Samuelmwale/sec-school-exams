@@ -11,6 +11,7 @@ import { exportToPDF, exportToWord } from "@/lib/exports";
 import { Student } from "@/types/student";
 import { Download, FileText, LogOut, DollarSign, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
+import { SystemProtection } from "@/components/SystemProtection";
 
 interface Invoice {
   id: string;
@@ -203,8 +204,9 @@ const StudentPortal = () => {
   const hasUnpaidInvoices = invoices.some(inv => inv.status === 'pending' || inv.status === 'overdue');
 
   return (
-    <div className="min-h-screen bg-background pb-8">
-      {school && (
+    <SystemProtection>
+      <div className="min-h-screen bg-background pb-8">
+        {school && (
         <div className="bg-primary/5 border-b border-border py-4">
           <div className="container mx-auto px-4 text-center">
             <h1 className="text-2xl md:text-3xl font-bold text-primary mb-1">
@@ -506,7 +508,8 @@ const StudentPortal = () => {
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </SystemProtection>
   );
 };
 

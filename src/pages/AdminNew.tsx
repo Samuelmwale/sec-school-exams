@@ -18,6 +18,7 @@ import { exportToExcel, exportToPDF, exportToWord, exportAllToZip } from "@/lib/
 import { storageHelper } from "@/lib/storage";
 import { toast } from "sonner";
 import { PasswordProtection } from "@/components/PasswordProtection";
+import { SystemProtection } from "@/components/SystemProtection";
 
 const AdminNew = () => {
   const navigate = useNavigate();
@@ -409,12 +410,13 @@ const AdminNew = () => {
   const settings = storageHelper.getSettings();
 
   return (
-    <PasswordProtection
-      requiredPassword="1111"
-      title="Admin Panel Access"
-      description="Enter password to access admin panel"
-      storageKey="admin_auth"
-    >
+    <SystemProtection>
+      <PasswordProtection
+        requiredPassword="1111"
+        title="Admin Panel Access"
+        description="Enter password to access admin panel"
+        storageKey="admin_auth"
+      >
       <div className="min-h-screen bg-background pt-16 pb-8">
       <div className="container mx-auto px-4">
         <Button variant="ghost" onClick={() => navigate("/")} className="mb-4">
@@ -611,6 +613,7 @@ const AdminNew = () => {
       </div>
     </div>
     </PasswordProtection>
+    </SystemProtection>
   );
 };
 
