@@ -11,6 +11,12 @@ import { supabase } from "@/integrations/supabase/client";
 const Dashboard = () => {
   const navigate = useNavigate();
   const [studentCount, setStudentCount] = useState(0);
+  const [maleCount, setMaleCount] = useState(0);
+  const [femaleCount, setFemaleCount] = useState(0);
+  const [passedMale, setPassedMale] = useState(0);
+  const [passedFemale, setPassedFemale] = useState(0);
+  const [failedMale, setFailedMale] = useState(0);
+  const [failedFemale, setFailedFemale] = useState(0);
   const { isActive, expiryDate, loading: subscriptionLoading } = useSubscription();
   const [school, setSchool] = useState<any>(null);
 
@@ -39,13 +45,27 @@ const Dashboard = () => {
 
         setSchool(schoolData);
 
-        // Count students in this school
-        const { count } = await supabase
+        // Get all students for this school
+        const { data: students } = await supabase
           .from("students" as any)
-          .select("*", { count: "exact", head: true })
+          .select("sex, status")
           .eq("school_id", profile.school_id) as any;
 
-        setStudentCount(count || 0);
+        if (students) {
+          setStudentCount(students.length);
+          
+          // Count by gender
+          const males = students.filter((s: any) => s.sex === 'M');
+          const females = students.filter((s: any) => s.sex === 'F');
+          setMaleCount(males.length);
+          setFemaleCount(females.length);
+          
+          // Count passed/failed by gender
+          setPassedMale(males.filter((s: any) => s.status === 'PASS').length);
+          setPassedFemale(females.filter((s: any) => s.status === 'PASS').length);
+          setFailedMale(males.filter((s: any) => s.status === 'FAIL').length);
+          setFailedFemale(females.filter((s: any) => s.status === 'FAIL').length);
+        }
       }
     } catch (error) {
       console.error("Error loading dashboard:", error);
@@ -74,20 +94,52 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-primary">{studentCount}</div>
-              <p className="text-xs text-muted-foreground">Registered in system</p>
+              <p className="text-xs text-muted-foreground">
+                Male: {maleCount} | Female: {femaleCount}
+              </p>
             </CardContent>
           </Card>
 
           <Card className="hover:shadow-lg transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Status</CardTitle>
+              <CardTitle className="text-sm font-medium">Passed Students</CardTitle>
+              <BarChart3 className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-secondary">
+                {passedMale + passedFemale}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Male: {passedMale} | Female: {passedFemale}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Failed Students</CardTitle>
+              <AlertCircle className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-destructive">
+                {failedMale + failedFemale}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Male: {failedMale} | Female: {failedFemale}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Subscription</CardTitle>
               <BarChart3 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className={`text-2xl font-bold ${!isActive ? "text-destructive" : "text-secondary"}`}>
                 {isActive ? "Active" : "Expired"}
               </div>
-              <p className="text-xs text-muted-foreground">Subscription status</p>
+              <p className="text-xs text-muted-foreground">Status</p>
             </CardContent>
           </Card>
         </div>

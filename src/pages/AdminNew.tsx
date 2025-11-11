@@ -37,10 +37,34 @@ const AdminNew = () => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showPasteDialog, setShowPasteDialog] = useState(false);
   const [pasteText, setPasteText] = useState("");
+  const [schoolId, setSchoolId] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadSchoolId();
+  }, []);
 
   useEffect(() => {
     loadStudents();
   }, [filter.classForm, filter.year, filter.term]);
+
+  const loadSchoolId = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("school_id")
+        .eq("id", user.id)
+        .single();
+
+      if (profile?.school_id) {
+        setSchoolId(profile.school_id);
+      }
+    } catch (error) {
+      console.error("Error loading school ID:", error);
+    }
+  };
 
   useEffect(() => {
     filterStudents();
@@ -153,6 +177,7 @@ const AdminNew = () => {
             total: studentToSave.total,
             rank: studentToSave.rank,
             status: studentToSave.status,
+            school_id: schoolId,
           } as any])
           .select();
 
@@ -325,6 +350,7 @@ const AdminNew = () => {
             total: student.total,
             rank: student.rank,
             status: student.status,
+            school_id: schoolId,
           } as any]).select();
           
           if (error) {
@@ -368,6 +394,7 @@ const AdminNew = () => {
             total: student.total,
             rank: student.rank,
             status: student.status,
+            school_id: schoolId,
           } as any]).select();
           
           if (error) {
