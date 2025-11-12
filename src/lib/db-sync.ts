@@ -9,6 +9,18 @@ export const dbSync = {
     if (localStudents.length === 0) return;
 
     try {
+      // Identify current user's school
+      let schoolId: string | null = null;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles' as any)
+          .select('school_id')
+          .eq('id', user.id)
+          .single();
+        schoolId = (profile as any)?.school_id ?? null;
+      }
+
       // Insert all students (ignore duplicates)
       const { error } = await supabase
         .from('students')
@@ -25,6 +37,7 @@ export const dbSync = {
             total: s.total,
             rank: s.rank,
             status: s.status,
+            school_id: schoolId,
           })),
           { onConflict: 'student_id,class_form,year,term' }
         );
@@ -73,6 +86,18 @@ export const dbSync = {
   // Save student to database
   async saveStudent(student: Student): Promise<void> {
     try {
+      // Identify current user's school
+      let schoolId: string | null = null;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles' as any)
+          .select('school_id')
+          .eq('id', user.id)
+          .single();
+        schoolId = (profile as any)?.school_id ?? null;
+      }
+
       const { error } = await supabase.from('students').upsert({
         student_id: student.id,
         name: student.name,
@@ -85,6 +110,7 @@ export const dbSync = {
         total: student.total,
         rank: student.rank,
         status: student.status,
+        school_id: schoolId,
       }, { onConflict: 'student_id,class_form,year,term' });
 
       if (error) throw error;

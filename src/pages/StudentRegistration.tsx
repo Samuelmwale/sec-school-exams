@@ -36,14 +36,17 @@ export default function StudentRegistration() {
 
       const student = students[0];
 
-      // Get school info
-      const { data: school } = await supabase
-        .from("schools")
-        .select("*")
-        .eq("id", student.school_id)
+      // Get school info via RPC to bypass RLS for public login
+      if (!student.school_id) {
+        toast.error("Student record is not linked to a school. Contact administration.");
+        setLoading(false);
+        return;
+      }
+      const { data: school, error: schoolError } = await supabase
+        .rpc('get_school_public', { p_school_id: student.school_id })
         .single();
 
-      if (!school) {
+      if (schoolError || !school) {
         toast.error("School not found");
         setLoading(false);
         return;

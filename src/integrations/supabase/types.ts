@@ -412,6 +412,20 @@ export type Database = {
         Args: { p_class_form: string; p_year: string }
         Returns: string
       }
+      get_school_public: {
+        Args: { p_school_id: string }
+        Returns: {
+          address: string
+          center_number: string
+          district_name: string
+          division_name: string
+          id: string
+          is_active: boolean
+          school_name: string
+          subscription_expiry: string
+          zone_name: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

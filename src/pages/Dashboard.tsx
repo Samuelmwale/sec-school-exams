@@ -45,11 +45,17 @@ const Dashboard = () => {
 
         setSchool(schoolData);
 
+        // Repair missing school_id on existing student records (one-time fix)
+        await supabase
+          .from('students' as any)
+          .update({ school_id: profile.school_id })
+          .is('school_id', null);
+
         // Get all students for this school
         const { data: students } = await supabase
-          .from("students" as any)
-          .select("sex, status")
-          .eq("school_id", profile.school_id) as any;
+          .from('students' as any)
+          .select('sex, status')
+          .eq('school_id', profile.school_id) as any;
 
         if (students) {
           setStudentCount(students.length);
