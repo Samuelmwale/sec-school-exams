@@ -19,6 +19,8 @@ const Dashboard = () => {
   const [failedFemale, setFailedFemale] = useState(0);
   const { isActive, expiryDate, loading: subscriptionLoading } = useSubscription();
   const [school, setSchool] = useState<any>(null);
+  const [junior, setJunior] = useState({ total: 0, male: 0, female: 0, passedMale: 0, passedFemale: 0, failedMale: 0, failedFemale: 0 });
+  const [senior, setSenior] = useState({ total: 0, male: 0, female: 0, passedMale: 0, passedFemale: 0, failedMale: 0, failedFemale: 0 });
 
   useEffect(() => {
     loadDashboardData();
@@ -54,23 +56,41 @@ const Dashboard = () => {
         // Get all students for this school
         const { data: students } = await supabase
           .from('students' as any)
-          .select('sex, status')
+          .select('sex, status, class_form')
           .eq('school_id', profile.school_id) as any;
 
         if (students) {
           setStudentCount(students.length);
           
-          // Count by gender
           const males = students.filter((s: any) => s.sex === 'M');
           const females = students.filter((s: any) => s.sex === 'F');
           setMaleCount(males.length);
           setFemaleCount(females.length);
           
-          // Count passed/failed by gender
           setPassedMale(males.filter((s: any) => s.status === 'PASS').length);
           setPassedFemale(females.filter((s: any) => s.status === 'PASS').length);
           setFailedMale(males.filter((s: any) => s.status === 'FAIL').length);
           setFailedFemale(females.filter((s: any) => s.status === 'FAIL').length);
+
+          const juniors = students.filter((s: any) => s.class_form === 'Form1' || s.class_form === 'Form2');
+          const seniors = students.filter((s: any) => s.class_form === 'Form3' || s.class_form === 'Form4');
+
+          const calc = (arr: any[]) => {
+            const m = arr.filter((s: any) => s.sex === 'M');
+            const f = arr.filter((s: any) => s.sex === 'F');
+            return {
+              total: arr.length,
+              male: m.length,
+              female: f.length,
+              passedMale: m.filter((s: any) => s.status === 'PASS').length,
+              passedFemale: f.filter((s: any) => s.status === 'PASS').length,
+              failedMale: m.filter((s: any) => s.status === 'FAIL').length,
+              failedFemale: f.filter((s: any) => s.status === 'FAIL').length,
+            }
+          }
+
+          setJunior(calc(juniors));
+          setSenior(calc(seniors));
         }
       }
     } catch (error) {
@@ -146,6 +166,34 @@ const Dashboard = () => {
                 {isActive ? "Active" : "Expired"}
               </div>
               <p className="text-xs text-muted-foreground">Status</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-6 mb-12">
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Junior Section (Form 1-2)</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-lg font-bold text-primary">Total: {junior.total}</div>
+              <p className="text-xs text-muted-foreground">Male: {junior.male} | Female: {junior.female}</p>
+              <p className="text-xs text-muted-foreground mt-2">Passed - Male: {junior.passedMale} | Female: {junior.passedFemale}</p>
+              <p className="text-xs text-muted-foreground">Failed - Male: {junior.failedMale} | Female: {junior.failedFemale}</p>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Senior Section (Form 3-4)</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-lg font-bold text-secondary">Total: {senior.total}</div>
+              <p className="text-xs text-muted-foreground">Male: {senior.male} | Female: {senior.female}</p>
+              <p className="text-xs text-muted-foreground mt-2">Passed - Male: {senior.passedMale} | Female: {senior.passedFemale}</p>
+              <p className="text-xs text-muted-foreground">Failed - Male: {senior.failedMale} | Female: {senior.failedFemale}</p>
             </CardContent>
           </Card>
         </div>

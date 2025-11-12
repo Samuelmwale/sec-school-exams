@@ -21,29 +21,53 @@ export default function StudentRegistration() {
     setLoading(true);
 
     try {
-      // Find student by name (case-insensitive) and student_id (from students table)
-      const { data: students, error: studentError } = await supabase
-        .from("students")
-        .select("*, school_id")
-        .ilike("name", formData.name.trim())
-        .eq("student_id", formData.studentId.trim());
+      // Try Student ID first; fallback to Registration Number (Forms 3-4)
+      const inputId = formData.studentId.trim();
 
-      if (studentError || !students || students.length === 0) {
-        toast.error("Invalid name or student ID. Please check your credentials.");
+      const [{ data: studentById, error: errById }, { data: regByNum, error: errReg }] = await Promise.all([
+        supabase.from("students").select("*, school_id, year, class_form").eq("student_id", inputId).maybeSingle(),
+        supabase.from("student_registrations").select("*, school_id, year, class_form").eq("registration_number", inputId).maybeSingle(),
+      ]);
+
+      let student = studentById || null as any;
+      let schoolId: string | null = (studentById as any)?.school_id || null;
+
+      // If not found in students by ID, try mapping registration -> students
+      if (!student && regByNum) {
+        const reg = regByNum as any;
+        const normalizedName = formData.name.trim();
+        const nameLike = `%${normalizedName.replace(/\s+/g, "%")}%`;
+
+        const { data: matchStudent } = await supabase
+          .from("students" as any)
+          .select("*, school_id, year, class_form")
+          .ilike("name", nameLike)
+          .eq("year", reg.year)
+          .eq("class_form", reg.class_form)
+          .maybeSingle() as any;
+
+        if (matchStudent) {
+          student = matchStudent;
+          schoolId = (matchStudent as any).school_id || (reg as any).school_id || null;
+        } else {
+          schoolId = (reg as any).school_id || null;
+        }
+      }
+
+      if (!student) {
+        toast.error("Invalid student ID or registration number. Please check your credentials.");
         setLoading(false);
         return;
       }
 
-      const student = students[0];
-
       // Get school info via RPC to bypass RLS for public login
-      if (!student.school_id) {
+      if (!schoolId) {
         toast.error("Student record is not linked to a school. Contact administration.");
         setLoading(false);
         return;
       }
       const { data: school, error: schoolError } = await supabase
-        .rpc('get_school_public', { p_school_id: student.school_id })
+        .rpc('get_school_public', { p_school_id: schoolId })
         .single();
 
       if (schoolError || !school) {

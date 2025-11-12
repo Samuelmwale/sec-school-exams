@@ -85,6 +85,25 @@ export const calculateTotal = (marks: SubjectMarks): number => {
   }
 };
 
+export const calculateBest6PassCount = (marks: SubjectMarks): number => {
+  const validMarks = Object.entries(marks)
+    .filter(([_, mark]) => mark !== "AB" && typeof mark === "number")
+    .map(([subject, mark]) => ({ subject, mark: mark as number }))
+    .sort((a, b) => b.mark - a.mark);
+
+  const englishEntry = validMarks.find(entry => entry.subject === "eng");
+
+  let selected: { subject: string; mark: number }[] = [];
+  if (englishEntry) {
+    const others = validMarks.filter(entry => entry.subject !== "eng");
+    selected = [englishEntry, ...others.slice(0, 5)];
+  } else {
+    selected = validMarks.slice(0, 6);
+  }
+
+  return selected.filter(entry => entry.mark >= PASS_MARK).length;
+};
+
 export const calculateAverage = (marks: SubjectMarks): number => {
   const values = Object.values(marks).filter((m) => m !== "AB");
   if (values.length === 0) return 0;
@@ -107,28 +126,37 @@ export const determineStatus = (marks: SubjectMarks): "PASS" | "FAIL" => {
 };
 
 export const calculateRanks = (students: Student[]): Student[] => {
-  // Recalculate totals for all students (they may be outdated)
-  const studentsWithRecalcTotal = students.map(s => ({
+  // Recalculate totals and pass metrics for all students
+  const studentsWithMetrics = students.map(s => ({
     ...s,
-    total: calculateTotal(s.marks)
+    total: calculateTotal(s.marks),
+    _passCount: calculateBest6PassCount(s.marks),
+    _englishPassed: (typeof s.marks.eng === 'number') && s.marks.eng >= PASS_MARK,
   }));
   
-  // Sort by total descending (based on best 6 subjects)
-  const sorted = [...studentsWithRecalcTotal].sort((a, b) => b.total - a.total);
-
-  // Dense ranking
-  let currentRank = 1;
-  let previousTotal = -1;
-
-  sorted.forEach((student, index) => {
-    if (student.total !== previousTotal) {
-      currentRank = index + 1;
-      previousTotal = student.total;
-    }
-    student.rank = currentRank;
+  // Sort: English passed first, then by pass count (best 6 incl. English), then by total
+  const sorted = [...studentsWithMetrics].sort((a, b) => {
+    if (a._englishPassed !== b._englishPassed) return Number(b._englishPassed) - Number(a._englishPassed);
+    if (a._passCount !== b._passCount) return b._passCount - a._passCount;
+    return b.total - a.total;
   });
 
-  return sorted;
+  // Dense ranking based on the same metrics
+  let currentRank = 1;
+  let prev = { _englishPassed: undefined as any, _passCount: -1, total: -1 };
+
+  sorted.forEach((student, index) => {
+    if (student._englishPassed !== prev._englishPassed || student._passCount !== prev._passCount || student.total !== prev.total) {
+      currentRank = index + 1;
+      prev = { _englishPassed: student._englishPassed, _passCount: student._passCount, total: student.total };
+    }
+    student.rank = currentRank;
+    // Clean up temporary fields if necessary
+    delete (student as any)._passCount;
+    delete (student as any)._englishPassed;
+  });
+
+  return sorted as Student[];
 };
 
 export const calculateSubjectPositions = (students: Student[]): Student[] => {
