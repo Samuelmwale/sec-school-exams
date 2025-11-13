@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { AlertCircle } from "lucide-react";
 import { storageHelper } from "@/lib/storage";
 import { Button } from "./ui/button";
 import {
@@ -66,53 +65,28 @@ export const SubscriptionBanner = () => {
   };
 
   return (
-    <>
-      <div
-        className={`fixed top-0 left-0 right-0 z-50 ${
-          isExpired ? "bg-destructive" : "bg-primary"
-        } text-white px-4 py-2 flex items-center justify-between shadow-lg`}
-      >
-        <div className="flex items-center gap-2">
-          {isExpired && <AlertCircle className="h-5 w-5" />}
-          <span className="font-semibold">
-            {isExpired ? "Subscription Expired" : `Subscription: ${timeLeft}`}
-          </span>
-        </div>
-        {isExpired && (
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setShowDialog(true)}
-            className="bg-white text-destructive hover:bg-gray-100"
-          >
-            Reactivate
+    <Dialog open={showDialog} onOpenChange={setShowDialog}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Reactivate Subscription</DialogTitle>
+          <DialogDescription>
+            Enter the admin reactivation key to restore access to the system.
+            For subscription or reactivation, contact: 0880425220
+          </DialogDescription>
+        </DialogHeader>
+        <Input
+          type="password"
+          placeholder="Enter reactivation key"
+          value={reactivationKey}
+          onChange={(e) => setReactivationKey(e.target.value)}
+        />
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setShowDialog(false)}>
+            Cancel
           </Button>
-        )}
-      </div>
-
-      <Dialog open={showDialog} onOpenChange={setShowDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Reactivate Subscription</DialogTitle>
-            <DialogDescription>
-              Enter the admin reactivation key to restore access to the system.
-              For subscription or reactivation, contact: 0880425220
-            </DialogDescription>
-          </DialogHeader>
-          <Input
-            type="password"
-            placeholder="Enter reactivation key"
-            value={reactivationKey}
-            onChange={(e) => setReactivationKey(e.target.value)}
-          />
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleReactivate}>Reactivate</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
+          <Button onClick={handleReactivate}>Reactivate</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };

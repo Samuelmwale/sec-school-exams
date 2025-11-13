@@ -24,7 +24,7 @@ export const PasswordProtection = ({
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    const stored = sessionStorage.getItem(storageKey);
+    const stored = localStorage.getItem(storageKey);
     if (stored === "true") {
       setIsAuthenticated(true);
     }
@@ -35,7 +35,7 @@ export const PasswordProtection = ({
     
     if (password === requiredPassword) {
       setIsAuthenticated(true);
-      sessionStorage.setItem(storageKey, "true");
+      localStorage.setItem(storageKey, "true");
       toast.success("Access granted");
     } else {
       toast.error("Incorrect password");

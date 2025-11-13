@@ -11,7 +11,7 @@ export const AdminLogin = () => {
   const [password, setPassword] = useState("");
 
   useEffect(() => {
-    const isAuth = sessionStorage.getItem("admin_auth");
+    const isAuth = localStorage.getItem("admin_auth");
     if (isAuth === "true") {
       navigate("/admin");
     }
@@ -21,7 +21,7 @@ export const AdminLogin = () => {
     e.preventDefault();
 
     if (password === "1111") {
-      sessionStorage.setItem("admin_auth", "true");
+      localStorage.setItem("admin_auth", "true");
       toast.success("Access granted");
       navigate("/admin");
     } else {
