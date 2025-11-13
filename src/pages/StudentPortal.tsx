@@ -245,16 +245,17 @@ const StudentPortal = () => {
             <CardContent className="space-y-4">
               <p className="text-sm">
                 You have outstanding fees that need to be cleared. Your invoice details are shown below. 
-                Please contact the fees office with your registration number and invoice numbers for payment clearance.
+                Please visit the Financial Accounts office and present your invoice numbers for payment clearance.
               </p>
               <div className="space-y-2">
                 {invoices.filter(inv => inv.status === 'pending' || inv.status === 'overdue').map((invoice) => (
-                  <div key={invoice.id} className="flex justify-between items-center p-3 bg-background rounded-lg border">
+                  <div key={invoice.id} className="flex justify-between items-center p-3 bg-background rounded-lg border border-yellow-500">
                     <div>
-                      <p className="font-semibold">Invoice: #{invoice.id.slice(0, 8).toUpperCase()}</p>
+                      <p className="font-mono font-semibold text-sm">Invoice: {invoice.id.slice(0, 8).toUpperCase()}</p>
                       <p className="text-sm text-muted-foreground">
                         {invoice.term} {invoice.year} - Installment {invoice.installment_number}
                       </p>
+                      <p className="text-xs text-yellow-700 font-semibold mt-1">⚠️ Present this number to Accounts</p>
                     </div>
                     <div className="text-right">
                       <p className="font-bold text-lg">MWK {Number(invoice.amount).toLocaleString()}</p>
@@ -332,6 +333,7 @@ const StudentPortal = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Invoice Number</TableHead>
                     <TableHead>Term</TableHead>
                     <TableHead>Installment</TableHead>
                     <TableHead>Amount (MWK)</TableHead>
@@ -341,10 +343,21 @@ const StudentPortal = () => {
                 </TableHeader>
                 <TableBody>
                   {invoices.map((invoice) => (
-                    <TableRow key={invoice.id}>
+                    <TableRow 
+                      key={invoice.id}
+                      className={invoice.status === 'pending' || invoice.status === 'overdue' ? 'bg-yellow-50' : ''}
+                    >
+                      <TableCell className="font-mono text-xs">
+                        {invoice.id.slice(0, 8).toUpperCase()}
+                        {(invoice.status === 'pending' || invoice.status === 'overdue') && (
+                          <div className="text-xs text-yellow-700 font-semibold mt-1">
+                            ⚠️ Show to Accounts
+                          </div>
+                        )}
+                      </TableCell>
                       <TableCell>{invoice.term} {invoice.year}</TableCell>
-                      <TableCell>Installment {invoice.installment_number}</TableCell>
-                      <TableCell>{invoice.amount.toLocaleString()}</TableCell>
+                      <TableCell>#{invoice.installment_number}</TableCell>
+                      <TableCell className="font-semibold">{invoice.amount.toLocaleString()}</TableCell>
                       <TableCell>{new Date(invoice.due_date).toLocaleDateString()}</TableCell>
                       <TableCell>
                         <Badge
@@ -355,8 +368,9 @@ const StudentPortal = () => {
                               ? "destructive"
                               : "secondary"
                           }
+                          className={invoice.status === "paid" ? "bg-green-600" : ""}
                         >
-                          {invoice.status}
+                          {invoice.status === "paid" ? "✓ Cleared" : invoice.status}
                         </Badge>
                       </TableCell>
                     </TableRow>

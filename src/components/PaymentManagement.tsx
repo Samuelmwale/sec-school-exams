@@ -73,13 +73,16 @@ export const PaymentManagement = () => {
 
     const { error: updateError } = await supabase
       .from("student_invoices")
-      .update({ status: "paid" })
+      .update({ 
+        status: "paid",
+        updated_at: new Date().toISOString()
+      })
       .eq("id", invoice.id);
 
     if (updateError) {
       toast.error("Failed to update invoice");
     } else {
-      toast.success("Payment recorded successfully");
+      toast.success(`✓ Payment cleared for ${invoice.registration_number}. Student notified in portal.`);
       loadInvoices();
     }
   };
@@ -244,12 +247,15 @@ export const PaymentManagement = () => {
                       <Button
                         size="sm"
                         onClick={() => handleMarkAsPaid(invoice)}
+                        className="bg-green-600 hover:bg-green-700"
                       >
                         <DollarSign className="mr-2 h-4 w-4" />
-                        Clear Payment
+                        ✓ Clear Payment
                       </Button>
                     ) : (
-                      <span className="text-sm text-muted-foreground">Cleared</span>
+                      <Badge variant="default" className="bg-green-600">
+                        ✓ Cleared
+                      </Badge>
                     )}
                   </TableCell>
                 </TableRow>
