@@ -7,6 +7,8 @@ import { useEffect, useState } from "react";
 import { SchoolHeader } from "@/components/SchoolHeader";
 import { useSubscription } from "@/hooks/useSubscription";
 import { supabase } from "@/integrations/supabase/client";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -21,10 +23,12 @@ const Dashboard = () => {
   const [school, setSchool] = useState<any>(null);
   const [junior, setJunior] = useState({ total: 0, male: 0, female: 0, passedMale: 0, passedFemale: 0, failedMale: 0, failedFemale: 0 });
   const [senior, setSenior] = useState({ total: 0, male: 0, female: 0, passedMale: 0, passedFemale: 0, failedMale: 0, failedFemale: 0 });
+  const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
+  const [selectedTerm, setSelectedTerm] = useState<string>("Term1");
 
   useEffect(() => {
     loadDashboardData();
-  }, []);
+  }, [selectedYear, selectedTerm]);
 
   const loadDashboardData = async () => {
     try {
@@ -53,11 +57,13 @@ const Dashboard = () => {
           .update({ school_id: profile.school_id })
           .is('school_id', null);
 
-        // Get all students for this school
+        // Get students filtered by year and term
         const { data: students } = await supabase
           .from('students' as any)
           .select('sex, status, class_form')
-          .eq('school_id', profile.school_id) as any;
+          .eq('school_id', profile.school_id)
+          .eq('year', selectedYear)
+          .eq('term', selectedTerm) as any;
 
         if (students) {
           setStudentCount(students.length);
@@ -102,6 +108,49 @@ const Dashboard = () => {
     <div className="min-h-screen bg-background">
       <SchoolHeader />
       <div className="container mx-auto px-4 py-8">
+        {/* Filters */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Dashboard Filters</CardTitle>
+            <CardDescription>Select year and term to view statistics</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="year">Academic Year</Label>
+                <Select value={selectedYear} onValueChange={setSelectedYear}>
+                  <SelectTrigger id="year">
+                    <SelectValue placeholder="Select year" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[...Array(5)].map((_, i) => {
+                      const year = new Date().getFullYear() - i;
+                      return (
+                        <SelectItem key={year} value={year.toString()}>
+                          {year}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="term">Term</Label>
+                <Select value={selectedTerm} onValueChange={setSelectedTerm}>
+                  <SelectTrigger id="term">
+                    <SelectValue placeholder="Select term" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Term1">Term 1</SelectItem>
+                    <SelectItem value="Term2">Term 2</SelectItem>
+                    <SelectItem value="Term3">Term 3</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {!subscriptionLoading && !isActive && (
           <Alert className="mb-6 border-destructive">
             <AlertCircle className="h-4 w-4" />
