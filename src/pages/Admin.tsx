@@ -15,14 +15,16 @@ import { StudentForm } from "@/components/StudentForm";
 import { ExcelUploader } from "@/components/ExcelUploader";
 import { exportToExcel, exportToPDF, exportToWord, exportAllToZip } from "@/lib/exports";
 import { toast } from "sonner";
+import { generateAcademicYears, getCurrentAcademicYear } from "@/lib/academic-years";
 
 const Admin = () => {
   const navigate = useNavigate();
+  const academicYears = generateAcademicYears();
   const [students, setStudents] = useState<Student[]>([]);
   const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editStudent, setEditStudent] = useState<Student | undefined>();
-  const [filter, setFilter] = useState({ classForm: "Form1" as ClassForm, year: "2024", term: "Term1" as Term, search: "" });
+  const [filter, setFilter] = useState({ classForm: "Form1" as ClassForm, year: getCurrentAcademicYear(), term: "Term1" as Term, search: "" });
   const [uploadMode, setUploadMode] = useState<"append" | "replace">("append");
 
   useEffect(() => {
@@ -110,8 +112,17 @@ const Admin = () => {
               </Select>
             </div>
             <div>
-              <Label>Year</Label>
-              <Input value={filter.year} onChange={(e) => setFilter({ ...filter, year: e.target.value })} />
+              <Label>Academic Year</Label>
+              <Select value={filter.year} onValueChange={(v) => setFilter({ ...filter, year: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {academicYears.map((year) => (
+                    <SelectItem key={year} value={year}>
+                      {year}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label>Term</Label>
