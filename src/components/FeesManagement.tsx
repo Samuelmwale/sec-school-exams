@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
 import { CLASS_FORMS, TERMS } from "@/lib/grading";
+import { generateAcademicYears, getCurrentAcademicYear } from "@/lib/academic-years";
 
 interface SchoolFee {
   id: string;
@@ -22,11 +23,13 @@ interface SchoolFee {
 export const FeesManagement = () => {
   const [fees, setFees] = useState<SchoolFee[]>([]);
   const [classForm, setClassForm] = useState("");
-  const [year, setYear] = useState(new Date().getFullYear().toString());
+  const [year, setYear] = useState(getCurrentAcademicYear());
   const [term, setTerm] = useState("");
   const [amount, setAmount] = useState("");
   const [installments, setInstallments] = useState("2");
   const [loading, setLoading] = useState(false);
+  
+  const academicYears = generateAcademicYears();
 
   useEffect(() => {
     loadFees();
@@ -110,12 +113,18 @@ export const FeesManagement = () => {
 
             <div>
               <Label>Year</Label>
-              <Input
-                type="number"
-                value={year}
-                onChange={(e) => setYear(e.target.value)}
-                placeholder="2024"
-              />
+              <Select value={year} onValueChange={setYear}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select year" />
+                </SelectTrigger>
+                <SelectContent>
+                  {academicYears.map((yr) => (
+                    <SelectItem key={yr} value={yr}>
+                      {yr}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
