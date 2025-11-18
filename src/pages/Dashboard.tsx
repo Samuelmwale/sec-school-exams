@@ -9,6 +9,7 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { generateAcademicYears, getCurrentAcademicYear } from "@/lib/academic-years";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -23,8 +24,9 @@ const Dashboard = () => {
   const [school, setSchool] = useState<any>(null);
   const [junior, setJunior] = useState({ total: 0, male: 0, female: 0, passedMale: 0, passedFemale: 0, failedMale: 0, failedFemale: 0 });
   const [senior, setSenior] = useState({ total: 0, male: 0, female: 0, passedMale: 0, passedFemale: 0, failedMale: 0, failedFemale: 0 });
-  const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
+  const [selectedYear, setSelectedYear] = useState<string>(getCurrentAcademicYear());
   const [selectedTerm, setSelectedTerm] = useState<string>("Term1");
+  const academicYears = generateAcademicYears();
 
   useEffect(() => {
     loadDashboardData();
@@ -123,14 +125,11 @@ const Dashboard = () => {
                     <SelectValue placeholder="Select year" />
                   </SelectTrigger>
                   <SelectContent>
-                    {[...Array(5)].map((_, i) => {
-                      const year = new Date().getFullYear() - i;
-                      return (
-                        <SelectItem key={year} value={year.toString()}>
-                          {year}
-                        </SelectItem>
-                      );
-                    })}
+                    {academicYears.map((year) => (
+                      <SelectItem key={year} value={year}>
+                        {year}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

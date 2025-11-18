@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Student, ClassForm, Term, Sex, SubjectMarks } from "@/types/student";
 import { SUBJECTS, roundMarks } from "@/lib/grading";
 import { toast } from "sonner";
+import { generateAcademicYears, getCurrentAcademicYear } from "@/lib/academic-years";
 
 interface StudentFormProps {
   open: boolean;
@@ -16,12 +17,14 @@ interface StudentFormProps {
 }
 
 export const StudentForm = ({ open, onClose, onSave, student }: StudentFormProps) => {
+  const academicYears = generateAcademicYears();
+  
   const [formData, setFormData] = useState({
     name: student?.name || "",
     sex: student?.sex || "M" as Sex,
     student_id: student?.student_id || "",
     classForm: student?.classForm || "Form1" as ClassForm,
-    year: student?.year || new Date().getFullYear().toString(),
+    year: student?.year || getCurrentAcademicYear(),
     term: student?.term || "Term1" as Term,
     marks: student?.marks || {
       eng: "" as any, phy: "" as any, agr: "" as any, bio: "" as any,
@@ -102,13 +105,19 @@ export const StudentForm = ({ open, onClose, onSave, student }: StudentFormProps
           </div>
 
           <div>
-            <Label htmlFor="year">Year</Label>
-            <Input
-              id="year"
-              value={formData.year}
-              onChange={(e) => setFormData({ ...formData, year: e.target.value })}
-              placeholder="e.g., 2024 or 2024-2025"
-            />
+            <Label htmlFor="year">Academic Year</Label>
+            <Select value={formData.year} onValueChange={(v) => setFormData({ ...formData, year: v })}>
+              <SelectTrigger id="year">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {academicYears.map((year) => (
+                  <SelectItem key={year} value={year}>
+                    {year}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div>
