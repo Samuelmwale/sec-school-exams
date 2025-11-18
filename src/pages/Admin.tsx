@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Plus, Pencil, Trash2, FileDown, FileText } from "lucide-react";
 import { SystemProtection } from "@/components/SystemProtection";
+import { PasswordProtection } from "@/components/PasswordProtection";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -89,8 +90,14 @@ const Admin = () => {
 
   return (
     <SystemProtection>
-      <div className="min-h-screen bg-background pt-16 pb-8">
-        <div className="container mx-auto px-4">
+      <PasswordProtection
+        requiredPassword="1111"
+        title="Admin Panel Access"
+        description="Enter password to access admin panel"
+        storageKey="admin_auth"
+      >
+        <div className="min-h-screen bg-background pt-16 pb-8">
+          <div className="container mx-auto px-4">
         <Button variant="ghost" onClick={() => navigate("/")} className="mb-4">
           <ArrowLeft className="mr-2 h-4 w-4" />Back
         </Button>
@@ -219,6 +226,7 @@ const Admin = () => {
         <StudentForm open={showForm} onClose={() => { setShowForm(false); setEditStudent(undefined); }} onSave={handleSave} student={editStudent} />
         </div>
       </div>
+      </PasswordProtection>
     </SystemProtection>
   );
 };
