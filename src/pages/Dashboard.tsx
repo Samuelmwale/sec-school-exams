@@ -11,7 +11,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { generateAcademicYears, getCurrentAcademicYear } from "@/lib/academic-years";
 import { SystemProtection } from "@/components/SystemProtection";
-import { PasswordProtection } from "@/components/PasswordProtection";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -110,15 +109,9 @@ const Dashboard = () => {
 
   return (
     <SystemProtection>
-      <PasswordProtection
-        requiredPassword="1111"
-        title="Dashboard Access"
-        description="Enter password to access the dashboard"
-        storageKey="dashboard_auth"
-      >
-        <div className="min-h-screen bg-background">
-          <SchoolHeader />
-          <div className="container mx-auto px-4 py-8">
+      <div className="min-h-screen bg-background">
+        <SchoolHeader />
+        <div className="container mx-auto px-4 py-8">
         {/* Filters */}
         <Card className="mb-6">
           <CardHeader>
@@ -333,9 +326,7 @@ const Dashboard = () => {
         </div>
 
         </div>
-
       </div>
-      </PasswordProtection>
     </SystemProtection>
   );
 };
