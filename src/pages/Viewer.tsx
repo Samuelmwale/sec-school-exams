@@ -15,6 +15,7 @@ import { SubjectStatistics } from "@/components/SubjectStatistics";
 import { exportClassToPDF } from "@/lib/class-exports";
 import { exportToExcel, exportToWord, exportAllToZip } from "@/lib/exports";
 import { toast } from "sonner";
+import { generateAcademicYears, getCurrentAcademicYear } from "@/lib/academic-years";
 
 const Viewer = () => {
   const navigate = useNavigate();
@@ -22,7 +23,7 @@ const Viewer = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [filter, setFilter] = useState({ classForm: "Form1" as ClassForm, year: "2024", term: "Term1" as Term });
+  const [filter, setFilter] = useState({ classForm: "Form1" as ClassForm, year: getCurrentAcademicYear(), term: "Term1" as Term });
   const [stats, setStats] = useState({ total: 0, boys: 0, girls: 0, passedBoys: 0, passedGirls: 0, failedBoys: 0, failedGirls: 0 });
 
   useEffect(() => {
@@ -136,8 +137,8 @@ const Viewer = () => {
               <Select value={filter.year} onValueChange={(v) => setFilter({ ...filter, year: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {Array.from({ length: 17 }, (_, i) => 2024 + i).map((y) => (
-                    <SelectItem key={y} value={y.toString()}>{y}</SelectItem>
+                  {generateAcademicYears().map((y) => (
+                    <SelectItem key={y} value={y}>{y}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
