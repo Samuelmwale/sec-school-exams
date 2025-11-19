@@ -69,9 +69,9 @@ const Auth = () => {
           <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
             <GraduationCap className="w-6 h-6 text-primary" />
           </div>
-          <CardTitle>{isLogin ? "Student Login" : "Student Registration"}</CardTitle>
+          <CardTitle className="text-2xl">WELCOME TO SECONDARY SCHOOL RESULTS MANAGEMENT SYSTEM</CardTitle>
           <CardDescription>
-            {isLogin ? "Enter your credentials to access your results" : "Create an account to view your results"}
+            Please login or register
           </CardDescription>
         </CardHeader>
         <CardContent>
