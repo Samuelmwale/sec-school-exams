@@ -107,9 +107,9 @@ export default function StudentRegistration() {
           <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
             <UserCircle className="w-6 h-6 text-primary" />
           </div>
-          <CardTitle className="text-2xl">Student Login</CardTitle>
+          <CardTitle className="text-2xl">WELCOME TO SECONDARY SCHOOL RESULTS MANAGEMENT SYSTEM</CardTitle>
           <CardDescription>
-            Enter your name and registration number to access your portal
+            Please login or register
           </CardDescription>
         </CardHeader>
         <CardContent>

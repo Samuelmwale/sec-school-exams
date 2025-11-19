@@ -12,6 +12,7 @@ import { Student } from "@/types/student";
 import { Download, FileText, LogOut, DollarSign, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { SystemProtection } from "@/components/SystemProtection";
+import { generateAcademicYears } from "@/lib/academic-years";
 
 interface Invoice {
   id: string;
@@ -411,11 +412,13 @@ const StudentPortal = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Years</SelectItem>
-                    {Array.from(new Set(studentRecords.map(r => r.year))).map((year) => (
-                      <SelectItem key={year} value={year}>
-                        {year}
-                      </SelectItem>
-                    ))}
+                    {generateAcademicYears()
+                      .filter(year => studentRecords.some(r => r.year === year))
+                      .map((year) => (
+                        <SelectItem key={year} value={year}>
+                          {year}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>
