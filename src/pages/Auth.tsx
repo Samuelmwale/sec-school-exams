@@ -24,9 +24,34 @@ const Auth = () => {
 
     try {
       if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        toast.success("Logged in successfully!");
+        
+        // Fetch school name for welcome message
+        if (authData.user) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("school_id")
+            .eq("id", authData.user.id)
+            .single();
+          
+          if (profile?.school_id) {
+            const { data: school } = await supabase
+              .from("schools")
+              .select("school_name")
+              .eq("id", profile.school_id)
+              .single();
+            
+            if (school) {
+              toast.success(`WELCOME TO ${school.school_name.toUpperCase()} RESULTS MANAGEMENT SYSTEM`);
+            } else {
+              toast.success("Logged in successfully!");
+            }
+          } else {
+            toast.success("Logged in successfully!");
+          }
+        }
+        
         navigate("/student-portal");
       } else {
         // Register

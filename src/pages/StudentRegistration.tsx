@@ -90,7 +90,7 @@ export default function StudentRegistration() {
       sessionStorage.setItem("student_data", JSON.stringify(student));
       sessionStorage.setItem("school_data", JSON.stringify(school));
       
-      toast.success("Welcome back!");
+      toast.success(`Welcome ${student.name} to ${school.school_name} Student Portal Results Management System`);
       navigate("/student-portal");
     } catch (error: any) {
       console.error("Error:", error);
