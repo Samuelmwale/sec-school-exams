@@ -8,8 +8,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { DollarSign } from "lucide-react";
-import { CLASS_FORMS } from "@/lib/grading";
+import { UserCheck } from "lucide-react";
+import { CLASS_FORMS, TERMS } from "@/lib/grading";
+import { generateAcademicYears, getCurrentAcademicYear } from "@/lib/academic-years";
+
+interface StudentRegistration {
+  id: string;
+  registration_number: string;
+  name: string;
+  class_form: string;
+  year: string;
+}
 
 interface Invoice {
   id: string;
@@ -23,97 +32,178 @@ interface Invoice {
   status: string;
 }
 
+interface StudentPaymentStatus {
+  registration: StudentRegistration;
+  invoices: Invoice[];
+  totalAmount: number;
+  paidAmount: number;
+  pendingAmount: number;
+  hasPendingPayments: boolean;
+}
+
 export const PaymentManagement = () => {
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [students, setStudents] = useState<StudentPaymentStatus[]>([]);
   const [selectedClass, setSelectedClass] = useState<string>("all");
-  const [selectedStatus, setSelectedStatus] = useState<string>("all");
+  const [selectedYear, setSelectedYear] = useState<string>(getCurrentAcademicYear());
+  const [selectedTerm, setSelectedTerm] = useState<string>("all");
   const [searchReg, setSearchReg] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const academicYears = generateAcademicYears();
 
   useEffect(() => {
-    loadInvoices();
-  }, [selectedClass, selectedStatus]);
+    loadStudentsWithPayments();
+  }, [selectedClass, selectedYear, selectedTerm]);
 
-  const loadInvoices = async () => {
-    let query = supabase
-      .from("student_invoices")
-      .select("*")
-      .order("due_date", { ascending: true });
+  const loadStudentsWithPayments = async () => {
+    setLoading(true);
+    try {
+      // Load all registered students
+      let studentQuery = supabase
+        .from("student_registrations")
+        .select("*")
+        .order("class_form")
+        .order("registration_number");
 
-    if (selectedClass !== "all") {
-      query = query.eq("class_form", selectedClass);
+      if (selectedClass !== "all") {
+        studentQuery = studentQuery.eq("class_form", selectedClass);
+      }
+      if (selectedYear !== "all") {
+        studentQuery = studentQuery.eq("year", selectedYear);
+      }
+
+      const { data: registrations, error: regError } = await studentQuery;
+
+      if (regError) {
+        toast.error("Failed to load students");
+        setLoading(false);
+        return;
+      }
+
+      // Load all invoices
+      let invoiceQuery = supabase
+        .from("student_invoices")
+        .select("*");
+
+      if (selectedYear !== "all") {
+        invoiceQuery = invoiceQuery.eq("year", selectedYear);
+      }
+      if (selectedTerm !== "all") {
+        invoiceQuery = invoiceQuery.eq("term", selectedTerm);
+      }
+
+      const { data: invoices, error: invError } = await invoiceQuery;
+
+      if (invError) {
+        toast.error("Failed to load invoices");
+        setLoading(false);
+        return;
+      }
+
+      // Combine students with their invoices
+      const studentsWithPayments: StudentPaymentStatus[] = (registrations || []).map((reg: any) => {
+        const studentInvoices = (invoices || []).filter(
+          (inv: any) => inv.registration_number === reg.registration_number
+        );
+
+        const totalAmount = studentInvoices.reduce((sum, inv: any) => sum + inv.amount, 0);
+        const paidAmount = studentInvoices
+          .filter((inv: any) => inv.status === "paid")
+          .reduce((sum, inv: any) => sum + inv.amount, 0);
+        const pendingAmount = totalAmount - paidAmount;
+        const hasPendingPayments = studentInvoices.some(
+          (inv: any) => inv.status === "pending" || inv.status === "overdue"
+        );
+
+        return {
+          registration: reg,
+          invoices: studentInvoices,
+          totalAmount,
+          paidAmount,
+          pendingAmount,
+          hasPendingPayments,
+        };
+      });
+
+      setStudents(studentsWithPayments);
+    } catch (error) {
+      console.error("Error loading data:", error);
+      toast.error("Failed to load payment data");
+    } finally {
+      setLoading(false);
     }
+  };
 
-    if (selectedStatus !== "all") {
-      query = query.eq("status", selectedStatus);
-    }
+  const handleClearAllPayments = async (student: StudentPaymentStatus) => {
+    const pendingInvoices = student.invoices.filter(
+      (inv) => inv.status === "pending" || inv.status === "overdue"
+    );
 
-    const { data, error } = await query;
-
-    if (error) {
-      toast.error("Failed to load invoices");
+    if (pendingInvoices.length === 0) {
+      toast.error("No pending payments to clear");
       return;
     }
 
-    setInvoices(data || []);
-  };
+    try {
+      // Create payment records
+      for (const invoice of pendingInvoices) {
+        await supabase.from("payments").insert({
+          invoice_id: invoice.id,
+          registration_number: invoice.registration_number,
+          amount: invoice.amount,
+          payment_method: "manual",
+          paid_by: "admin",
+        });
 
-  const handleMarkAsPaid = async (invoice: Invoice) => {
-    const { error: paymentError } = await supabase.from("payments").insert({
-      invoice_id: invoice.id,
-      registration_number: invoice.registration_number,
-      amount: invoice.amount,
-      payment_method: "manual",
-      paid_by: "admin",
-    });
+        // Update invoice status
+        await supabase
+          .from("student_invoices")
+          .update({
+            status: "paid",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", invoice.id);
+      }
 
-    if (paymentError) {
-      toast.error("Failed to record payment");
-      return;
-    }
-
-    const { error: updateError } = await supabase
-      .from("student_invoices")
-      .update({ 
-        status: "paid",
-        updated_at: new Date().toISOString()
-      })
-      .eq("id", invoice.id);
-
-    if (updateError) {
-      toast.error("Failed to update invoice");
-    } else {
-      toast.success(`✓ Payment cleared for ${invoice.registration_number}. Student notified in portal.`);
-      loadInvoices();
+      toast.success(
+        `✓ All payments cleared for ${student.registration.name}. Student notified in portal.`
+      );
+      loadStudentsWithPayments();
+    } catch (error) {
+      console.error("Error clearing payments:", error);
+      toast.error("Failed to clear payments");
     }
   };
 
-  const filteredInvoices = searchReg
-    ? invoices.filter((inv) =>
-        inv.registration_number.toLowerCase().includes(searchReg.toLowerCase())
+  const filteredStudents = searchReg
+    ? students.filter((s) =>
+        s.registration.registration_number.toLowerCase().includes(searchReg.toLowerCase()) ||
+        s.registration.name.toLowerCase().includes(searchReg.toLowerCase())
       )
-    : invoices;
+    : students;
 
-  const paidCount = filteredInvoices.filter((inv) => inv.status === "paid").length;
-  const unpaidCount = filteredInvoices.filter((inv) => inv.status === "pending").length;
-  const totalPaid = filteredInvoices
-    .filter((inv) => inv.status === "paid")
-    .reduce((sum, inv) => sum + inv.amount, 0);
-  const totalBalance = filteredInvoices
-    .filter((inv) => inv.status === "pending")
-    .reduce((sum, inv) => sum + inv.amount, 0);
-  const totalAmount = totalPaid + totalBalance;
-  
-  // Count unique students who have paid
-  const studentsPaid = new Set(
-    filteredInvoices.filter((inv) => inv.status === "paid").map((inv) => inv.registration_number)
-  ).size;
+  const totalStudents = filteredStudents.length;
+  const studentsPaid = filteredStudents.filter((s) => !s.hasPendingPayments && s.totalAmount > 0).length;
+  const studentsUnpaid = filteredStudents.filter((s) => s.hasPendingPayments).length;
+  const studentsNoInvoices = filteredStudents.filter((s) => s.invoices.length === 0).length;
+  const totalPaid = filteredStudents.reduce((sum, s) => sum + s.paidAmount, 0);
+  const totalPending = filteredStudents.reduce((sum, s) => sum + s.pendingAmount, 0);
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Students Paid</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Students</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalStudents}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium">Fully Paid</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">{studentsPaid}</div>
@@ -122,10 +212,19 @@ export const PaymentManagement = () => {
 
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Total Amount</CardTitle>
+            <CardTitle className="text-sm font-medium">With Pending</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">MWK {totalAmount.toLocaleString()}</div>
+            <div className="text-2xl font-bold text-red-600">{studentsUnpaid}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium">No Invoices</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-muted-foreground">{studentsNoInvoices}</div>
           </CardContent>
         </Card>
 
@@ -134,39 +233,34 @@ export const PaymentManagement = () => {
             <CardTitle className="text-sm font-medium">Total Paid</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">MWK {totalPaid.toLocaleString()}</div>
+            <div className="text-2xl font-bold text-green-600">
+              MWK {totalPaid.toLocaleString()}
+            </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Balance</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Pending</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">MWK {totalBalance.toLocaleString()}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Not Paid</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{unpaidCount}</div>
+            <div className="text-2xl font-bold text-red-600">
+              MWK {totalPending.toLocaleString()}
+            </div>
           </CardContent>
         </Card>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Student Payments</CardTitle>
+          <CardTitle>Student Payment Status - All Registered Students</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-4 mb-4">
             <div className="flex-1 min-w-[200px]">
-              <Label>Search Registration Number</Label>
+              <Label>Search Student</Label>
               <Input
-                placeholder="Search..."
+                placeholder="Search by name or registration number..."
                 value={searchReg}
                 onChange={(e) => setSearchReg(e.target.value)}
               />
@@ -190,16 +284,35 @@ export const PaymentManagement = () => {
             </div>
 
             <div>
-              <Label>Status</Label>
-              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+              <Label>Year</Label>
+              <Select value={selectedYear} onValueChange={setSelectedYear}>
                 <SelectTrigger className="w-[150px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="paid">Paid</SelectItem>
-                  <SelectItem value="overdue">Overdue</SelectItem>
+                  <SelectItem value="all">All Years</SelectItem>
+                  {academicYears.map((year) => (
+                    <SelectItem key={year} value={year}>
+                      {year}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label>Term</Label>
+              <Select value={selectedTerm} onValueChange={setSelectedTerm}>
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Terms</SelectItem>
+                  {TERMS.map((term) => (
+                    <SelectItem key={term} value={term}>
+                      {term}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -209,57 +322,78 @@ export const PaymentManagement = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>Reg Number</TableHead>
+                <TableHead>Name</TableHead>
                 <TableHead>Class</TableHead>
-                <TableHead>Term</TableHead>
-                <TableHead>Installment</TableHead>
-                <TableHead>Amount (MWK)</TableHead>
-                <TableHead>Due Date</TableHead>
+                <TableHead>Year</TableHead>
+                <TableHead>Invoices</TableHead>
+                <TableHead>Total (MWK)</TableHead>
+                <TableHead>Paid (MWK)</TableHead>
+                <TableHead>Pending (MWK)</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredInvoices.map((invoice) => (
-                <TableRow key={invoice.id}>
-                  <TableCell className="font-medium">
-                    {invoice.registration_number}
-                  </TableCell>
-                  <TableCell>{invoice.class_form}</TableCell>
-                  <TableCell>{invoice.term} {invoice.year}</TableCell>
-                  <TableCell>{invoice.installment_number}</TableCell>
-                  <TableCell>{invoice.amount.toLocaleString()}</TableCell>
-                  <TableCell>{new Date(invoice.due_date).toLocaleDateString()}</TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={
-                        invoice.status === "paid"
-                          ? "default"
-                          : invoice.status === "overdue"
-                          ? "destructive"
-                          : "secondary"
-                      }
-                    >
-                      {invoice.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {invoice.status === "pending" || invoice.status === "overdue" ? (
-                      <Button
-                        size="sm"
-                        onClick={() => handleMarkAsPaid(invoice)}
-                        className="bg-green-600 hover:bg-green-700"
-                      >
-                        <DollarSign className="mr-2 h-4 w-4" />
-                        ✓ Clear Payment
-                      </Button>
-                    ) : (
-                      <Badge variant="default" className="bg-green-600">
-                        ✓ Cleared
-                      </Badge>
-                    )}
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={10} className="text-center">
+                    Loading...
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : filteredStudents.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={10} className="text-center text-muted-foreground">
+                    No students found
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredStudents.map((student) => (
+                  <TableRow key={student.registration.id}>
+                    <TableCell className="font-medium">
+                      {student.registration.registration_number}
+                    </TableCell>
+                    <TableCell>{student.registration.name}</TableCell>
+                    <TableCell>{student.registration.class_form}</TableCell>
+                    <TableCell>{student.registration.year}</TableCell>
+                    <TableCell>{student.invoices.length}</TableCell>
+                    <TableCell>{student.totalAmount.toLocaleString()}</TableCell>
+                    <TableCell className="text-green-600">
+                      {student.paidAmount.toLocaleString()}
+                    </TableCell>
+                    <TableCell className="text-red-600">
+                      {student.pendingAmount.toLocaleString()}
+                    </TableCell>
+                    <TableCell>
+                      {student.invoices.length === 0 ? (
+                        <Badge variant="secondary">No Invoices</Badge>
+                      ) : !student.hasPendingPayments && student.totalAmount > 0 ? (
+                        <Badge variant="default">Fully Paid</Badge>
+                      ) : (
+                        <Badge variant="destructive">Pending</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {student.hasPendingPayments ? (
+                        <Button
+                          size="sm"
+                          onClick={() => handleClearAllPayments(student)}
+                        >
+                          <UserCheck className="mr-2 h-4 w-4" />
+                          Clear All
+                        </Button>
+                      ) : student.invoices.length === 0 ? (
+                        <span className="text-sm text-muted-foreground">
+                          Create fees first
+                        </span>
+                      ) : (
+                        <Badge variant="outline" className="text-green-600">
+                          ✓ Cleared
+                        </Badge>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>

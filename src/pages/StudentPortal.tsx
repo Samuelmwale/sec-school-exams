@@ -13,6 +13,7 @@ import { Download, FileText, LogOut, DollarSign, AlertCircle } from "lucide-reac
 import { toast } from "sonner";
 import { SystemProtection } from "@/components/SystemProtection";
 import { generateAcademicYears } from "@/lib/academic-years";
+import { AnnouncementBanner } from "@/components/AnnouncementBanner";
 
 interface Invoice {
   id: string;
@@ -221,6 +222,7 @@ const StudentPortal = () => {
       )}
       
       <div className="container mx-auto px-4 pt-8">
+        <AnnouncementBanner />
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-3xl font-bold text-primary">Student Portal</h1>

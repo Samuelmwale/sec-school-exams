@@ -112,6 +112,47 @@ export type Database = {
           },
         ]
       }
+      school_announcements: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          message: string
+          priority: string
+          school_id: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          message: string
+          priority?: string
+          school_id?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          message?: string
+          priority?: string
+          school_id?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "school_announcements_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       school_fees: {
         Row: {
           class_form: string
