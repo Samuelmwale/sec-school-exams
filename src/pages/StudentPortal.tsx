@@ -11,7 +11,7 @@ import { exportToPDF, exportToWord } from "@/lib/exports";
 import { Student } from "@/types/student";
 import { Download, FileText, LogOut, DollarSign, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
-import { SystemProtection } from "@/components/SystemProtection";
+// Students can access portal even if subscription expired
 import { generateAcademicYears } from "@/lib/academic-years";
 import { AnnouncementBanner } from "@/components/AnnouncementBanner";
 
@@ -208,8 +208,7 @@ const StudentPortal = () => {
   const filteredRecords = getFilteredRecords();
 
   return (
-    <SystemProtection>
-      <div className="min-h-screen bg-background pb-8">
+    <div className="min-h-screen bg-background pb-8">
         {school && (
         <div className="bg-primary/5 border-b border-border py-4">
           <div className="container mx-auto px-4 text-center">
@@ -450,11 +449,20 @@ const StudentPortal = () => {
               </div>
 
               <div className="flex gap-2 ml-auto">
-                <Button onClick={handleDownloadPDF} disabled={filteredRecords.length === 0}>
+                <Button 
+                  onClick={handleDownloadPDF} 
+                  disabled={filteredRecords.length === 0 || !isCleared}
+                  title={!isCleared ? "Clear your fees to download" : ""}
+                >
                   <Download className="mr-2 h-4 w-4" />
                   Download PDF
                 </Button>
-                <Button variant="outline" onClick={handleDownloadWord} disabled={filteredRecords.length === 0}>
+                <Button 
+                  variant="outline" 
+                  onClick={handleDownloadWord} 
+                  disabled={filteredRecords.length === 0 || !isCleared}
+                  title={!isCleared ? "Clear your fees to download" : ""}
+                >
                   <FileText className="mr-2 h-4 w-4" />
                   Download Word
                 </Button>
@@ -535,8 +543,7 @@ const StudentPortal = () => {
           </div>
         )}
       </div>
-      </div>
-    </SystemProtection>
+    </div>
   );
 };
 
