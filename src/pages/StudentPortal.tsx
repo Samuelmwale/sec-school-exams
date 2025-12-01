@@ -91,13 +91,12 @@ const StudentPortal = () => {
         setStudentRecords(mappedStudents);
       }
 
-      // Get invoices
+      // Get invoices - filter by registration_number only (school_id may be null in legacy data)
       const loadInvoices = async () => {
         const { data: invoicesData } = await supabase
           .from('student_invoices' as any)
           .select('*')
           .eq('registration_number', studentData.student_id)
-          .eq('school_id', schoolData.id)
           .order('due_date', { ascending: true }) as any;
 
         if (invoicesData) {
