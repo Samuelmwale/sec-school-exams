@@ -29,12 +29,7 @@ export const PasswordProtection = ({
   const { isActive, loading: subLoading } = useSubscription();
   const { school, loading: schoolLoading } = useSchool();
 
-  useEffect(() => {
-    const stored = localStorage.getItem(storageKey);
-    if (stored === "true") {
-      setIsAuthenticated(true);
-    }
-  }, [storageKey]);
+  // Password must be entered on every attempt - no localStorage persistence
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,7 +42,6 @@ export const PasswordProtection = ({
     
     if (password === requiredPassword) {
       setIsAuthenticated(true);
-      localStorage.setItem(storageKey, "true");
       toast.success("Access granted");
     } else {
       toast.error("Incorrect password");
