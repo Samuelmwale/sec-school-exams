@@ -31,6 +31,26 @@ const Dashboard = () => {
 
   useEffect(() => {
     loadDashboardData();
+    
+    // Subscribe to real-time changes for dashboard sync across devices
+    const channel = supabase
+      .channel('dashboard-students-sync')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'students'
+        },
+        () => {
+          loadDashboardData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [selectedYear, selectedTerm]);
 
   const loadDashboardData = async () => {

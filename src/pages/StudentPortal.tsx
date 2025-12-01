@@ -193,6 +193,10 @@ const StudentPortal = () => {
     .filter(inv => inv.status === 'paid')
     .reduce((sum, inv) => sum + inv.amount, 0);
   const pendingFees = totalFees - paidFees;
+  
+  // Student is only cleared if they have invoices AND all are paid
+  const isCleared = invoices.length > 0 && invoices.every(inv => inv.status === 'paid');
+  const hasUnpaidOrNoInvoices = !isCleared;
 
   if (loading) {
     return (
@@ -203,7 +207,6 @@ const StudentPortal = () => {
   }
 
   const filteredRecords = getFilteredRecords();
-  const hasUnpaidInvoices = invoices.some(inv => inv.status === 'pending' || inv.status === 'overdue');
 
   return (
     <SystemProtection>
@@ -236,8 +239,8 @@ const StudentPortal = () => {
           </Button>
         </div>
 
-        {/* Fee Payment Alert - Show if unpaid invoices exist */}
-        {hasUnpaidInvoices && (
+        {/* Fee Payment Alert - Show if not cleared */}
+        {hasUnpaidOrNoInvoices && (
           <Card className="mb-6 border-destructive bg-destructive/5">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-destructive">
@@ -247,9 +250,12 @@ const StudentPortal = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm">
-                You have outstanding fees that need to be cleared. Your invoice details are shown below. 
-                Please visit the Financial Accounts office and present your invoice numbers for payment clearance.
+                {invoices.length === 0 
+                  ? "No fees have been recorded for your account yet. Please contact the Financial Accounts office to have your fees set up before you can access results."
+                  : "You have outstanding fees that need to be cleared. Your invoice details are shown below. Please visit the Financial Accounts office and present your invoice numbers for payment clearance."
+                }
               </p>
+              {invoices.length > 0 && (
               <div className="space-y-2">
                 {invoices.filter(inv => inv.status === 'pending' || inv.status === 'overdue').map((invoice) => (
                   <div key={invoice.id} className="flex justify-between items-center p-3 bg-background rounded-lg border border-yellow-500">
@@ -269,11 +275,14 @@ const StudentPortal = () => {
                   </div>
                 ))}
               </div>
+              )}
+              {invoices.length > 0 && (
               <div className="bg-muted p-3 rounded-lg">
                 <p className="text-sm font-semibold">
                   Total Outstanding: MWK {pendingFees.toLocaleString()}
                 </p>
               </div>
+              )}
             </CardContent>
           </Card>
         )}
@@ -316,8 +325,8 @@ const StudentPortal = () => {
               <CardTitle className="text-sm font-medium">Status</CardTitle>
             </CardHeader>
             <CardContent>
-              <Badge variant={pendingFees === 0 ? "default" : "destructive"}>
-                {pendingFees === 0 ? "Cleared" : "Outstanding"}
+              <Badge variant={isCleared ? "default" : "destructive"}>
+                {isCleared ? "Cleared" : invoices.length === 0 ? "No Fees Recorded" : "Outstanding"}
               </Badge>
             </CardContent>
           </Card>
@@ -456,7 +465,7 @@ const StudentPortal = () => {
         </Card>
 
         {/* Results - Block if fees not cleared */}
-        {hasUnpaidInvoices ? (
+        {hasUnpaidOrNoInvoices ? (
           <Card>
             <CardContent className="pt-6">
               <div className="text-center py-12">
