@@ -497,6 +497,10 @@ export type Database = {
         Args: { p_code: string; p_school_id: string }
         Returns: boolean
       }
+      create_license_code: {
+        Args: { p_days: number; p_package_name: string }
+        Returns: string
+      }
       generate_license_code: { Args: never; Returns: string }
       generate_registration_number: {
         Args: { p_class_form: string; p_year: string }
