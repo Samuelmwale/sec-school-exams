@@ -345,6 +345,16 @@ const Dashboard = () => {
           </Card>
         </div>
 
+        {/* Discrete admin link */}
+        <div className="mt-12 pt-4 border-t border-border/30 text-center">
+          <button 
+            onClick={() => navigate("/license-admin")}
+            className="text-xs text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+          >
+            System Administration
+          </button>
+        </div>
+
         </div>
       </div>
     </SystemProtection>
