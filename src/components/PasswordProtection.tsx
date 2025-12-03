@@ -79,16 +79,17 @@ export const PasswordProtection = ({
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="p-4 bg-muted rounded-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <CreditCard className="h-5 w-5 text-muted-foreground" />
-                <p className="font-semibold">Contact Information</p>
+              <p className="font-semibold mb-2">Contact Mr Mwale for Reactivation:</p>
+              <div className="space-y-1 text-sm">
+                <p><span className="font-semibold">Phone:</span> 0991656504</p>
+                <p><span className="font-semibold">Phone:</span> 0880425220</p>
               </div>
-              <p className="text-sm text-muted-foreground">
-                Phone: <span className="font-semibold">0880425220</span>
+              <p className="text-xs text-muted-foreground mt-2">
+                Send your school name and preferred subscription package to receive a license code.
               </p>
             </div>
             <Button variant="outline" onClick={() => navigate("/settings")} className="w-full">
-              Go to Settings
+              Enter License Code
             </Button>
             <Button variant="ghost" onClick={() => navigate("/")} className="w-full">
               Back to Home
