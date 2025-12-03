@@ -70,26 +70,16 @@ const LicenseGenerator = () => {
       const pkg = PACKAGES.find(p => p.name === selectedPackage);
       if (!pkg) return;
 
-      // Generate code using the database function
-      const { data: codeData, error: codeError } = await supabase
-        .rpc("generate_license_code" as any);
-
-      if (codeError) throw codeError;
-
-      const code = codeData as string;
-
-      // Insert the license code
-      const { error: insertError } = await supabase
-        .from("license_codes" as any)
-        .insert({
-          code,
-          days: pkg.days,
-          package_name: pkg.name,
+      // Generate and insert license code using the combined database function
+      const { data: code, error } = await supabase
+        .rpc("create_license_code", {
+          p_days: pkg.days,
+          p_package_name: pkg.name,
         });
 
-      if (insertError) throw insertError;
+      if (error) throw error;
 
-      setGeneratedCode(code);
+      setGeneratedCode(code as string);
       toast.success("License code generated successfully!");
       fetchLicenses();
     } catch (error) {
