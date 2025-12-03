@@ -1,11 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, Save, Key, Phone, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { PasswordProtection } from "@/components/PasswordProtection";
@@ -14,6 +13,8 @@ const Settings = () => {
   const navigate = useNavigate();
   const [school, setSchool] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [licenseCode, setLicenseCode] = useState("");
+  const [activating, setActivating] = useState(false);
 
   useEffect(() => {
     fetchSettings();
@@ -83,26 +84,47 @@ const Settings = () => {
     }
   };
 
-  const extendSubscription = async (days: number) => {
-    if (!school) return;
-    
+  const activateLicense = async () => {
+    if (!licenseCode.trim()) {
+      toast.error("Please enter a license code");
+      return;
+    }
+
+    if (!school?.id) {
+      toast.error("School not found");
+      return;
+    }
+
+    setActivating(true);
     try {
-      const newExpiry = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
-      
-      const { error } = await supabase
-        .from("schools")
-        .update({ subscription_expiry: newExpiry, is_active: true })
-        .eq("id", school.id);
+      const { data, error } = await supabase
+        .rpc("activate_license" as any, {
+          p_code: licenseCode.trim().toUpperCase(),
+          p_school_id: school.id,
+        });
 
       if (error) throw error;
 
-      toast.success(`Subscription extended by ${days} days!`);
-      fetchSettings();
+      if (data) {
+        toast.success("License activated successfully! Your subscription has been renewed.");
+        setLicenseCode("");
+        fetchSettings();
+        // Reload the page to update subscription status everywhere
+        window.location.reload();
+      } else {
+        toast.error("Invalid or already used license code");
+      }
     } catch (error) {
-      console.error("Error extending subscription:", error);
-      toast.error("Failed to extend subscription");
+      console.error("Error activating license:", error);
+      toast.error("Failed to activate license code");
+    } finally {
+      setActivating(false);
     }
   };
+
+  const isExpired = school?.subscription_expiry 
+    ? new Date(school.subscription_expiry) < new Date() 
+    : true;
 
   if (loading) {
     return (
@@ -207,43 +229,59 @@ const Settings = () => {
               <CardTitle>Subscription Status</CardTitle>
               <CardDescription>
                 {school?.subscription_expiry 
-                  ? `Expires: ${new Date(school.subscription_expiry).toLocaleDateString()}`
+                  ? isExpired 
+                    ? `Expired on: ${new Date(school.subscription_expiry).toLocaleDateString()}`
+                    : `Active until: ${new Date(school.subscription_expiry).toLocaleDateString()}`
                   : "No active subscription"}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div>
-                <Label>Extend Subscription</Label>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => extendSubscription(30)}
-                  >
-                    +30 Days
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => extendSubscription(90)}
-                  >
-                    +90 Days
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => extendSubscription(365)}
-                  >
-                    +1 Year
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => extendSubscription(36500)}
-                  >
-                    Lifetime
+              {/* License Code Activation */}
+              <div className="space-y-3">
+                <Label>Activate License Code</Label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Enter license code (e.g., XXXX-XXXX-XXXX-XXXX)"
+                    value={licenseCode}
+                    onChange={(e) => setLicenseCode(e.target.value.toUpperCase())}
+                    className="font-mono"
+                  />
+                  <Button onClick={activateLicense} disabled={activating}>
+                    {activating ? (
+                      "Activating..."
+                    ) : (
+                      <>
+                        <Key className="mr-2 h-4 w-4" />
+                        Activate
+                      </>
+                    )}
                   </Button>
                 </div>
               </div>
-              <p className="text-sm text-muted-foreground mt-2">
-                For subscription or reactivation, contact: 0880425220
-              </p>
+
+              {/* Contact Information */}
+              <div className="p-4 bg-muted rounded-lg mt-4">
+                <h4 className="font-semibold mb-3 flex items-center gap-2">
+                  <MessageCircle className="h-4 w-4" />
+                  Need a License Code?
+                </h4>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Contact Mr Mwale for subscription activation or renewal:
+                </p>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Phone className="h-4 w-4 text-primary" />
+                    <span className="font-semibold">0991656504</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <Phone className="h-4 w-4 text-primary" />
+                    <span className="font-semibold">0880425220</span>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground mt-3">
+                  Send your school name and preferred subscription package to receive a license code.
+                </p>
+              </div>
             </CardContent>
           </Card>
 

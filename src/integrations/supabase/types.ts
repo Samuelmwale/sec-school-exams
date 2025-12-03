@@ -14,6 +14,50 @@ export type Database = {
   }
   public: {
     Tables: {
+      license_codes: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string
+          days: number
+          id: string
+          is_used: boolean
+          package_name: string
+          school_id: string | null
+          used_at: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by?: string
+          days: number
+          id?: string
+          is_used?: boolean
+          package_name: string
+          school_id?: string | null
+          used_at?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string
+          days?: number
+          id?: string
+          is_used?: boolean
+          package_name?: string
+          school_id?: string | null
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "license_codes_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payments: {
         Row: {
           amount: number
@@ -449,6 +493,11 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      activate_license: {
+        Args: { p_code: string; p_school_id: string }
+        Returns: boolean
+      }
+      generate_license_code: { Args: never; Returns: string }
       generate_registration_number: {
         Args: { p_class_form: string; p_year: string }
         Returns: string
