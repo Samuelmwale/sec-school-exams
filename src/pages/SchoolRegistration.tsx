@@ -33,6 +33,25 @@ const SchoolRegistration = () => {
         return;
       }
 
+      // Check for duplicate school first
+      const { data: duplicateCheck, error: checkError } = await supabase.rpc('check_duplicate_school', {
+        p_school_name: formData.schoolName,
+        p_center_number: formData.centerNumber,
+        p_district_name: formData.districtName,
+        p_zone_name: formData.zoneName,
+        p_division_name: formData.divisionName,
+      });
+
+      if (checkError) {
+        console.error("Duplicate check error:", checkError);
+      }
+
+      if (duplicateCheck && duplicateCheck.length > 0 && duplicateCheck[0].is_duplicate) {
+        toast.error(`A school with these details already exists: ${duplicateCheck[0].existing_school_name}. Please contact the administrator if you believe this is an error.`);
+        setLoading(false);
+        return;
+      }
+
       // Register school via backend function (bypasses RLS safely)
       const { data: schoolId, error: regError } = await supabase.rpc('register_school', {
         p_school_name: formData.schoolName,
@@ -49,8 +68,8 @@ const SchoolRegistration = () => {
       navigate("/dashboard");
     } catch (error: any) {
       console.error("Registration error:", error);
-      if (error.message?.includes("duplicate")) {
-        toast.error("This center number is already registered");
+      if (error.message?.includes("duplicate") || error.message?.includes("unique")) {
+        toast.error("A school with these details already exists. Please contact the administrator.");
       } else {
         toast.error(error.message || "Failed to register school");
       }

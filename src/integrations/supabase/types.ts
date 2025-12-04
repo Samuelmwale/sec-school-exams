@@ -14,6 +14,100 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_logs: {
+        Row: {
+          activity_type: string
+          created_at: string | null
+          details: Json | null
+          id: string
+          ip_address: string | null
+          school_id: string | null
+          student_registration_number: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          activity_type: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+          school_id?: string | null
+          student_registration_number?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          activity_type?: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+          school_id?: string | null
+          student_registration_number?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_logs_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      admin_messages: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_broadcast: boolean | null
+          is_read: boolean | null
+          message: string
+          read_at: string | null
+          recipient_school_id: string | null
+          sender_id: string | null
+          sender_type: string
+          subject: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_broadcast?: boolean | null
+          is_read?: boolean | null
+          message: string
+          read_at?: string | null
+          recipient_school_id?: string | null
+          sender_id?: string | null
+          sender_type: string
+          subject: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_broadcast?: boolean | null
+          is_read?: boolean | null
+          message?: string
+          read_at?: string | null
+          recipient_school_id?: string | null
+          sender_id?: string | null
+          sender_type?: string
+          subject?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_messages_recipient_school_id_fkey"
+            columns: ["recipient_school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       license_codes: {
         Row: {
           code: string
@@ -263,12 +357,16 @@ export type Database = {
       schools: {
         Row: {
           address: string
+          block_reason: string | null
+          blocked_permanently: boolean | null
+          blocked_until: string | null
           center_number: string
           created_at: string | null
           district_name: string | null
           division_name: string | null
           id: string
           is_active: boolean
+          last_active_at: string | null
           school_name: string
           subscription_expiry: string | null
           updated_at: string | null
@@ -276,12 +374,16 @@ export type Database = {
         }
         Insert: {
           address: string
+          block_reason?: string | null
+          blocked_permanently?: boolean | null
+          blocked_until?: string | null
           center_number: string
           created_at?: string | null
           district_name?: string | null
           division_name?: string | null
           id?: string
           is_active?: boolean
+          last_active_at?: string | null
           school_name: string
           subscription_expiry?: string | null
           updated_at?: string | null
@@ -289,12 +391,16 @@ export type Database = {
         }
         Update: {
           address?: string
+          block_reason?: string | null
+          blocked_permanently?: boolean | null
+          blocked_until?: string | null
           center_number?: string
           created_at?: string | null
           district_name?: string | null
           division_name?: string | null
           id?: string
           is_active?: boolean
+          last_active_at?: string | null
           school_name?: string
           subscription_expiry?: string | null
           updated_at?: string | null
@@ -360,6 +466,8 @@ export type Database = {
           class_form: string
           created_at: string | null
           id: string
+          last_login_at: string | null
+          last_seen_at: string | null
           name: string
           phone_number: string | null
           registration_number: string
@@ -373,6 +481,8 @@ export type Database = {
           class_form: string
           created_at?: string | null
           id?: string
+          last_login_at?: string | null
+          last_seen_at?: string | null
           name: string
           phone_number?: string | null
           registration_number: string
@@ -386,6 +496,8 @@ export type Database = {
           class_form?: string
           created_at?: string | null
           id?: string
+          last_login_at?: string | null
+          last_seen_at?: string | null
           name?: string
           phone_number?: string | null
           registration_number?: string
@@ -497,6 +609,20 @@ export type Database = {
         Args: { p_code: string; p_school_id: string }
         Returns: boolean
       }
+      check_duplicate_school: {
+        Args: {
+          p_center_number: string
+          p_district_name: string
+          p_division_name: string
+          p_school_name: string
+          p_zone_name: string
+        }
+        Returns: {
+          existing_school_id: string
+          existing_school_name: string
+          is_duplicate: boolean
+        }[]
+      }
       create_license_code: {
         Args: { p_days: number; p_package_name: string }
         Returns: string
@@ -526,6 +652,16 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      is_school_blocked: { Args: { p_school_id: string }; Returns: boolean }
+      log_activity: {
+        Args: {
+          p_activity_type: string
+          p_details?: Json
+          p_school_id: string
+          p_student_reg?: string
+        }
+        Returns: undefined
       }
       mark_overdue_invoices: { Args: never; Returns: undefined }
       register_school: {
