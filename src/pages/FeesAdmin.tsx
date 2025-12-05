@@ -5,7 +5,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FeesManagement } from "@/components/FeesManagement";
 import { PaymentManagement } from "@/components/PaymentManagement";
 import { AnnouncementManagement } from "@/components/AnnouncementManagement";
-import { SubjectManagement } from "@/components/SubjectManagement";
 import { PasswordProtection } from "@/components/PasswordProtection";
 import { SystemProtection } from "@/components/SystemProtection";
 
@@ -32,10 +31,9 @@ const FeesAdmin = () => {
           <h1 className="text-3xl font-bold text-primary mb-6">Fees Management</h1>
 
           <Tabs defaultValue="fees" className="w-full">
-            <TabsList className="grid w-full max-w-3xl grid-cols-4">
+            <TabsList className="grid w-full max-w-2xl grid-cols-3">
               <TabsTrigger value="fees">School Fees</TabsTrigger>
               <TabsTrigger value="payments">Payments</TabsTrigger>
-              <TabsTrigger value="subjects">Subjects</TabsTrigger>
               <TabsTrigger value="announcements">Announcements</TabsTrigger>
             </TabsList>
 
@@ -45,10 +43,6 @@ const FeesAdmin = () => {
 
             <TabsContent value="payments" className="mt-6">
               <PaymentManagement />
-            </TabsContent>
-
-            <TabsContent value="subjects" className="mt-6">
-              <SubjectManagement />
             </TabsContent>
 
             <TabsContent value="announcements" className="mt-6">
