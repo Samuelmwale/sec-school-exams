@@ -7,10 +7,13 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { UserCheck } from "lucide-react";
+import { UserCheck, FileText, Receipt, Users } from "lucide-react";
 import { CLASS_FORMS, TERMS } from "@/lib/grading";
 import { generateAcademicYears, getCurrentAcademicYear } from "@/lib/academic-years";
+import { DocumentGenerator } from "./DocumentGenerator";
+import { useSchool } from "@/hooks/useSchool";
 
 interface StudentRegistration {
   id: string;
@@ -48,6 +51,10 @@ export const PaymentManagement = () => {
   const [selectedTerm, setSelectedTerm] = useState<string>("all");
   const [searchReg, setSearchReg] = useState("");
   const [loading, setLoading] = useState(false);
+  const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
+  const [documentStudent, setDocumentStudent] = useState<StudentPaymentStatus | null>(null);
+  const [documentType, setDocumentType] = useState<"receipt" | "invoice">("receipt");
+  const { school } = useSchool();
 
   const academicYears = generateAcademicYears();
 
@@ -175,6 +182,117 @@ export const PaymentManagement = () => {
     }
   };
 
+  const handleBulkClear = async () => {
+    const selectedList = filteredStudents.filter(s => selectedStudents.has(s.registration.id));
+    const pendingStudents = selectedList.filter(s => s.hasPendingPayments);
+    
+    if (pendingStudents.length === 0) {
+      toast.error("No selected students have pending payments");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      for (const student of pendingStudents) {
+        const pendingInvoices = student.invoices.filter(
+          (inv) => inv.status === "pending" || inv.status === "overdue"
+        );
+
+        for (const invoice of pendingInvoices) {
+          await supabase.from("payments").insert({
+            invoice_id: invoice.id,
+            registration_number: invoice.registration_number,
+            amount: invoice.amount,
+            payment_method: "manual",
+            paid_by: "admin",
+          });
+
+          await supabase
+            .from("student_invoices")
+            .update({ status: "paid", updated_at: new Date().toISOString() })
+            .eq("id", invoice.id);
+        }
+      }
+
+      toast.success(`✓ Cleared payments for ${pendingStudents.length} students`);
+      setSelectedStudents(new Set());
+      loadStudentsWithPayments();
+    } catch (error) {
+      console.error("Error bulk clearing:", error);
+      toast.error("Failed to clear some payments");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleClearAll = async () => {
+    const pendingStudents = filteredStudents.filter(s => s.hasPendingPayments);
+    
+    if (pendingStudents.length === 0) {
+      toast.error("No students with pending payments");
+      return;
+    }
+
+    if (!confirm(`Clear payments for ALL ${pendingStudents.length} students with pending fees?`)) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      for (const student of pendingStudents) {
+        const pendingInvoices = student.invoices.filter(
+          (inv) => inv.status === "pending" || inv.status === "overdue"
+        );
+
+        for (const invoice of pendingInvoices) {
+          await supabase.from("payments").insert({
+            invoice_id: invoice.id,
+            registration_number: invoice.registration_number,
+            amount: invoice.amount,
+            payment_method: "manual",
+            paid_by: "admin",
+          });
+
+          await supabase
+            .from("student_invoices")
+            .update({ status: "paid", updated_at: new Date().toISOString() })
+            .eq("id", invoice.id);
+        }
+      }
+
+      toast.success(`✓ Cleared payments for all ${pendingStudents.length} students`);
+      loadStudentsWithPayments();
+    } catch (error) {
+      console.error("Error clearing all:", error);
+      toast.error("Failed to clear payments");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleSelectStudent = (id: string) => {
+    const newSelected = new Set(selectedStudents);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedStudents(newSelected);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedStudents.size === filteredStudents.length) {
+      setSelectedStudents(new Set());
+    } else {
+      setSelectedStudents(new Set(filteredStudents.map(s => s.registration.id)));
+    }
+  };
+
+  const openDocument = (student: StudentPaymentStatus, type: "receipt" | "invoice") => {
+    setDocumentStudent(student);
+    setDocumentType(type);
+  };
+
   const filteredStudents = searchReg
     ? students.filter((s) =>
         s.registration.registration_number.toLowerCase().includes(searchReg.toLowerCase()) ||
@@ -253,7 +371,21 @@ export const PaymentManagement = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Student Payment Status - All Registered Students</CardTitle>
+          <div className="flex justify-between items-center">
+            <CardTitle>Student Payment Status - All Registered Students</CardTitle>
+            <div className="flex gap-2">
+              {selectedStudents.size > 0 && (
+                <Button onClick={handleBulkClear} disabled={loading} variant="secondary">
+                  <UserCheck className="mr-2 h-4 w-4" />
+                  Clear Selected ({selectedStudents.size})
+                </Button>
+              )}
+              <Button onClick={handleClearAll} disabled={loading} variant="outline">
+                <Users className="mr-2 h-4 w-4" />
+                Clear All Pending
+              </Button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-4 mb-4">
@@ -321,6 +453,12 @@ export const PaymentManagement = () => {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-12">
+                  <Checkbox
+                    checked={selectedStudents.size === filteredStudents.length && filteredStudents.length > 0}
+                    onCheckedChange={toggleSelectAll}
+                  />
+                </TableHead>
                 <TableHead>Reg Number</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Class</TableHead>
@@ -330,6 +468,7 @@ export const PaymentManagement = () => {
                 <TableHead>Paid (MWK)</TableHead>
                 <TableHead>Pending (MWK)</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Documents</TableHead>
                 <TableHead>Action</TableHead>
               </TableRow>
             </TableHeader>
@@ -342,13 +481,19 @@ export const PaymentManagement = () => {
                 </TableRow>
               ) : filteredStudents.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center text-muted-foreground">
+                  <TableCell colSpan={12} className="text-center text-muted-foreground">
                     No students found
                   </TableCell>
                 </TableRow>
               ) : (
                 filteredStudents.map((student) => (
                   <TableRow key={student.registration.id}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedStudents.has(student.registration.id)}
+                        onCheckedChange={() => toggleSelectStudent(student.registration.id)}
+                      />
+                    </TableCell>
                     <TableCell className="font-medium">
                       {student.registration.registration_number}
                     </TableCell>
@@ -373,13 +518,37 @@ export const PaymentManagement = () => {
                       )}
                     </TableCell>
                     <TableCell>
+                      <div className="flex gap-1">
+                        {student.paidAmount > 0 && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openDocument(student, "receipt")}
+                            title="Generate Receipt"
+                          >
+                            <Receipt className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {student.invoices.length > 0 && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openDocument(student, "invoice")}
+                            title="Generate Invoice"
+                          >
+                            <FileText className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
                       {student.hasPendingPayments ? (
                         <Button
                           size="sm"
                           onClick={() => handleClearAllPayments(student)}
                         >
                           <UserCheck className="mr-2 h-4 w-4" />
-                          Clear All
+                          Clear
                         </Button>
                       ) : student.invoices.length === 0 ? (
                         <span className="text-sm text-muted-foreground">
@@ -398,6 +567,31 @@ export const PaymentManagement = () => {
           </Table>
         </CardContent>
       </Card>
+
+      {documentStudent && school && (
+        <DocumentGenerator
+          student={{
+            registration_number: documentStudent.registration.registration_number,
+            name: documentStudent.registration.name,
+            class_form: documentStudent.registration.class_form,
+            year: documentStudent.registration.year,
+            invoices: documentStudent.invoices,
+            totalAmount: documentStudent.totalAmount,
+            paidAmount: documentStudent.paidAmount,
+            pendingAmount: documentStudent.pendingAmount,
+          }}
+          school={{
+            school_name: school.school_name,
+            center_number: school.center_number,
+            address: school.address,
+            district_name: school.district_name || undefined,
+            zone_name: school.zone_name || undefined,
+            division_name: school.division_name || undefined,
+          }}
+          documentType={documentType}
+          onClose={() => setDocumentStudent(null)}
+        />
+      )}
     </div>
   );
 };

@@ -354,6 +354,50 @@ export type Database = {
         }
         Relationships: []
       }
+      school_subjects: {
+        Row: {
+          abbreviation: string
+          created_at: string
+          display_order: number
+          id: string
+          is_active: boolean
+          is_custom: boolean
+          name: string
+          school_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          abbreviation: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          is_custom?: boolean
+          name: string
+          school_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          abbreviation?: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          is_custom?: boolean
+          name?: string
+          school_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "school_subjects_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       schools: {
         Row: {
           address: string
