@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Student, ClassForm, Term, Sex, SubjectMarks } from "@/types/student";
-import { SUBJECTS, roundMarks } from "@/lib/grading";
+import { roundMarks } from "@/lib/grading";
+import { useSchoolSubjects } from "@/hooks/useSchoolSubjects";
 import { toast } from "sonner";
 import { generateAcademicYears, getCurrentAcademicYear } from "@/lib/academic-years";
 
@@ -18,20 +19,37 @@ interface StudentFormProps {
 
 export const StudentForm = ({ open, onClose, onSave, student }: StudentFormProps) => {
   const academicYears = generateAcademicYears();
+  const { activeSubjects } = useSchoolSubjects();
   
   const [formData, setFormData] = useState({
-    name: student?.name || "",
-    sex: student?.sex || "M" as Sex,
-    student_id: student?.student_id || "",
-    classForm: student?.classForm || "Form1" as ClassForm,
-    year: student?.year || getCurrentAcademicYear(),
-    term: student?.term || "Term1" as Term,
-    marks: student?.marks || {
-      eng: "" as any, phy: "" as any, agr: "" as any, bio: "" as any,
-      che: "" as any, chi: "" as any, geo: "" as any, mat: "" as any,
-      soc: "" as any, his: "" as any, bk: "" as any,
-    },
+    name: "",
+    sex: "M" as Sex,
+    student_id: "",
+    classForm: "Form1" as ClassForm,
+    year: getCurrentAcademicYear(),
+    term: "Term1" as Term,
+    marks: {} as SubjectMarks,
   });
+
+  // Reset form when student changes or dialog opens
+  useEffect(() => {
+    if (open) {
+      const initialMarks: any = {};
+      activeSubjects.forEach(subject => {
+        initialMarks[subject.abbreviation] = student?.marks?.[subject.abbreviation as keyof SubjectMarks] ?? "AB";
+      });
+      
+      setFormData({
+        name: student?.name || "",
+        sex: student?.sex || "M",
+        student_id: student?.student_id || "",
+        classForm: student?.classForm || "Form1",
+        year: student?.year || getCurrentAcademicYear(),
+        term: student?.term || "Term1",
+        marks: initialMarks as SubjectMarks,
+      });
+    }
+  }, [open, student, activeSubjects]);
 
   const handleSubmit = () => {
     if (!formData.name.trim()) {
@@ -44,13 +62,13 @@ export const StudentForm = ({ open, onClose, onSave, student }: StudentFormProps
     onClose();
   };
 
-  const handleMarkChange = (subject: keyof SubjectMarks, value: string) => {
+  const handleMarkChange = (subjectAbbr: string, value: string) => {
     const marks = { ...formData.marks };
     if (value === "" || value === "AB" || value.toLowerCase() === "ab") {
-      marks[subject] = "AB";
+      (marks as any)[subjectAbbr] = "AB";
     } else {
       const num = parseFloat(value);
-      marks[subject] = isNaN(num) ? "AB" : num;
+      (marks as any)[subjectAbbr] = isNaN(num) ? "AB" : num;
     }
     setFormData({ ...formData, marks });
   };
@@ -137,14 +155,14 @@ export const StudentForm = ({ open, onClose, onSave, student }: StudentFormProps
           <div className="col-span-2 border-t pt-4 mt-2">
             <h3 className="font-semibold mb-4">Subject Marks</h3>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {Object.entries(SUBJECTS).map(([key, label]) => (
-                <div key={key}>
-                  <Label htmlFor={key}>{label}</Label>
+              {activeSubjects.map((subject) => (
+                <div key={subject.id}>
+                  <Label htmlFor={subject.abbreviation}>{subject.name}</Label>
                   <Input
-                    id={key}
+                    id={subject.abbreviation}
                     type="text"
-                    value={formData.marks[key as keyof SubjectMarks] === "AB" ? "AB" : formData.marks[key as keyof SubjectMarks]}
-                    onChange={(e) => handleMarkChange(key as keyof SubjectMarks, e.target.value)}
+                    value={(formData.marks as any)[subject.abbreviation] === "AB" ? "AB" : (formData.marks as any)[subject.abbreviation] ?? ""}
+                    onChange={(e) => handleMarkChange(subject.abbreviation, e.target.value)}
                     placeholder="0-100 or AB"
                   />
                 </div>
