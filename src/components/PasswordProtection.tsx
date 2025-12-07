@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useSchool } from "@/hooks/useSchool";
 import { useNavigate } from "react-router-dom";
+import { useIdleTimeout } from "@/hooks/useIdleTimeout";
 
 interface PasswordProtectionProps {
   children: React.ReactNode;
@@ -29,7 +30,34 @@ export const PasswordProtection = ({
   const { isActive, loading: subLoading } = useSubscription();
   const { school, loading: schoolLoading } = useSchool();
 
-  // Password must be entered on every attempt - no localStorage persistence
+  // Check localStorage on mount
+  useEffect(() => {
+    const stored = localStorage.getItem(storageKey);
+    const storedTime = localStorage.getItem(`${storageKey}_time`);
+    
+    if (stored === "true" && storedTime) {
+      const elapsed = Date.now() - parseInt(storedTime);
+      const tenMinutes = 10 * 60 * 1000;
+      
+      if (elapsed < tenMinutes) {
+        setIsAuthenticated(true);
+      } else {
+        // Session expired
+        localStorage.removeItem(storageKey);
+        localStorage.removeItem(`${storageKey}_time`);
+      }
+    }
+  }, [storageKey]);
+
+  // Idle timeout - expire session after 10 minutes of inactivity
+  useIdleTimeout(() => {
+    if (isAuthenticated) {
+      localStorage.removeItem(storageKey);
+      localStorage.removeItem(`${storageKey}_time`);
+      setIsAuthenticated(false);
+      toast.info("Session expired due to inactivity. Please login again.");
+    }
+  }, 10);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,6 +70,8 @@ export const PasswordProtection = ({
     
     if (password === requiredPassword) {
       setIsAuthenticated(true);
+      localStorage.setItem(storageKey, "true");
+      localStorage.setItem(`${storageKey}_time`, Date.now().toString());
       toast.success("Access granted");
     } else {
       toast.error("Incorrect password");

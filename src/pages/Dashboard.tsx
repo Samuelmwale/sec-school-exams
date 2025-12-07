@@ -56,7 +56,20 @@ const Dashboard = () => {
   const loadDashboardData = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      
+      // If no user, reset stats and return
+      if (!user) {
+        setStudentCount(0);
+        setMaleCount(0);
+        setFemaleCount(0);
+        setPassedMale(0);
+        setPassedFemale(0);
+        setFailedMale(0);
+        setFailedFemale(0);
+        setJunior({ total: 0, male: 0, female: 0, passedMale: 0, passedFemale: 0, failedMale: 0, failedFemale: 0 });
+        setSenior({ total: 0, male: 0, female: 0, passedMale: 0, passedFemale: 0, failedMale: 0, failedFemale: 0 });
+        return;
+      }
 
       // Get user's school
       const { data: profile } = await supabase
@@ -65,62 +78,81 @@ const Dashboard = () => {
         .eq("id", user.id)
         .single() as any;
 
-      if (profile?.school_id) {
-        const { data: schoolData } = await supabase
-          .from("schools" as any)
-          .select("*")
-          .eq("id", profile.school_id)
-          .single() as any;
+      if (!profile?.school_id) {
+        console.log("No school_id found for user");
+        return;
+      }
 
-        setSchool(schoolData);
+      const { data: schoolData } = await supabase
+        .from("schools" as any)
+        .select("*")
+        .eq("id", profile.school_id)
+        .single() as any;
 
-        // Repair missing school_id on existing student records (one-time fix)
-        await supabase
-          .from('students' as any)
-          .update({ school_id: profile.school_id })
-          .is('school_id', null);
+      setSchool(schoolData);
 
-        // Get students filtered by year and term
-        const { data: students } = await supabase
-          .from('students' as any)
-          .select('sex, status, class_form')
-          .eq('school_id', profile.school_id)
-          .eq('year', selectedYear)
-          .eq('term', selectedTerm) as any;
+      // Repair missing school_id on existing student records (one-time fix)
+      await supabase
+        .from('students' as any)
+        .update({ school_id: profile.school_id })
+        .is('school_id', null);
 
-        if (students) {
-          setStudentCount(students.length);
-          
-          const males = students.filter((s: any) => s.sex === 'M');
-          const females = students.filter((s: any) => s.sex === 'F');
-          setMaleCount(males.length);
-          setFemaleCount(females.length);
-          
-          setPassedMale(males.filter((s: any) => s.status === 'PASS').length);
-          setPassedFemale(females.filter((s: any) => s.status === 'PASS').length);
-          setFailedMale(males.filter((s: any) => s.status === 'FAIL').length);
-          setFailedFemale(females.filter((s: any) => s.status === 'FAIL').length);
+      // Get students filtered by year and term
+      const { data: students, error } = await supabase
+        .from('students' as any)
+        .select('sex, status, class_form')
+        .eq('school_id', profile.school_id)
+        .eq('year', selectedYear)
+        .eq('term', selectedTerm) as any;
 
-          const juniors = students.filter((s: any) => s.class_form === 'Form1' || s.class_form === 'Form2');
-          const seniors = students.filter((s: any) => s.class_form === 'Form3' || s.class_form === 'Form4');
+      if (error) {
+        console.error("Error fetching students:", error);
+        return;
+      }
 
-          const calc = (arr: any[]) => {
-            const m = arr.filter((s: any) => s.sex === 'M');
-            const f = arr.filter((s: any) => s.sex === 'F');
-            return {
-              total: arr.length,
-              male: m.length,
-              female: f.length,
-              passedMale: m.filter((s: any) => s.status === 'PASS').length,
-              passedFemale: f.filter((s: any) => s.status === 'PASS').length,
-              failedMale: m.filter((s: any) => s.status === 'FAIL').length,
-              failedFemale: f.filter((s: any) => s.status === 'FAIL').length,
-            }
+      if (students && students.length > 0) {
+        setStudentCount(students.length);
+        
+        const males = students.filter((s: any) => s.sex === 'M');
+        const females = students.filter((s: any) => s.sex === 'F');
+        setMaleCount(males.length);
+        setFemaleCount(females.length);
+        
+        setPassedMale(males.filter((s: any) => s.status === 'PASS').length);
+        setPassedFemale(females.filter((s: any) => s.status === 'PASS').length);
+        setFailedMale(males.filter((s: any) => s.status === 'FAIL').length);
+        setFailedFemale(females.filter((s: any) => s.status === 'FAIL').length);
+
+        const juniors = students.filter((s: any) => s.class_form === 'Form1' || s.class_form === 'Form2');
+        const seniors = students.filter((s: any) => s.class_form === 'Form3' || s.class_form === 'Form4');
+
+        const calc = (arr: any[]) => {
+          const m = arr.filter((s: any) => s.sex === 'M');
+          const f = arr.filter((s: any) => s.sex === 'F');
+          return {
+            total: arr.length,
+            male: m.length,
+            female: f.length,
+            passedMale: m.filter((s: any) => s.status === 'PASS').length,
+            passedFemale: f.filter((s: any) => s.status === 'PASS').length,
+            failedMale: m.filter((s: any) => s.status === 'FAIL').length,
+            failedFemale: f.filter((s: any) => s.status === 'FAIL').length,
           }
-
-          setJunior(calc(juniors));
-          setSenior(calc(seniors));
         }
+
+        setJunior(calc(juniors));
+        setSenior(calc(seniors));
+      } else {
+        // No students found, reset to 0
+        setStudentCount(0);
+        setMaleCount(0);
+        setFemaleCount(0);
+        setPassedMale(0);
+        setPassedFemale(0);
+        setFailedMale(0);
+        setFailedFemale(0);
+        setJunior({ total: 0, male: 0, female: 0, passedMale: 0, passedFemale: 0, failedMale: 0, failedFemale: 0 });
+        setSenior({ total: 0, male: 0, female: 0, passedMale: 0, passedFemale: 0, failedMale: 0, failedFemale: 0 });
       }
     } catch (error) {
       console.error("Error loading dashboard:", error);

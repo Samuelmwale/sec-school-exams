@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Pencil, Trash2, FileDown, FileText } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, FileDown, FileText, LogOut, LogIn } from "lucide-react";
 import { SystemProtection } from "@/components/SystemProtection";
 import { PasswordProtection } from "@/components/PasswordProtection";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,8 @@ import { useSchoolSubjects } from "@/hooks/useSchoolSubjects";
 import { exportToExcel, exportToPDF, exportToWord, exportAllToZip } from "@/lib/exports";
 import { toast } from "sonner";
 import { generateAcademicYears, getCurrentAcademicYear } from "@/lib/academic-years";
+import { supabase } from "@/integrations/supabase/client";
+import { useIdleTimeout } from "@/hooks/useIdleTimeout";
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -29,6 +31,7 @@ const Admin = () => {
   const [editStudent, setEditStudent] = useState<Student | undefined>();
   const [filter, setFilter] = useState({ classForm: "Form1" as ClassForm, year: getCurrentAcademicYear(), term: "Term1" as Term, search: "" });
   const [uploadMode, setUploadMode] = useState<"append" | "replace">("append");
+  const [user, setUser] = useState<any>(null);
 
   const {
     activeSubjects,
@@ -38,7 +41,41 @@ const Admin = () => {
     deleteSubject,
     reorderSubjects,
     loading: subjectsLoading,
+    reload: reloadSubjects,
   } = useSchoolSubjects();
+
+  const handleLogout = async () => {
+    localStorage.removeItem("admin_auth");
+    localStorage.removeItem("fees_admin_auth");
+    localStorage.removeItem("viewer_auth");
+    await supabase.auth.signOut();
+    toast.success("Logged out successfully");
+    navigate("/");
+  };
+
+  // Idle timeout - auto logout after 10 minutes
+  useIdleTimeout(() => {
+    if (localStorage.getItem("admin_auth") === "true") {
+      toast.info("Session expired due to inactivity");
+      handleLogout();
+    }
+  }, 10);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user);
+      if (user) reloadSubjects();
+    });
+    
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        setTimeout(() => reloadSubjects(), 0);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   useEffect(() => {
     loadStudents();
@@ -118,9 +155,24 @@ const Admin = () => {
       >
         <div className="min-h-screen bg-background pt-16 pb-8">
           <div className="container mx-auto px-4">
-            <Button variant="ghost" onClick={() => navigate("/")} className="mb-4">
-              <ArrowLeft className="mr-2 h-4 w-4" />Back
-            </Button>
+            <div className="flex items-center justify-between mb-4">
+              <Button variant="ghost" onClick={() => navigate("/")}>
+                <ArrowLeft className="mr-2 h-4 w-4" />Back
+              </Button>
+              <div className="flex gap-2">
+                {user ? (
+                  <Button variant="outline" size="sm" onClick={handleLogout}>
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Logout
+                  </Button>
+                ) : (
+                  <Button variant="outline" size="sm" onClick={() => navigate("/auth")}>
+                    <LogIn className="h-4 w-4 mr-2" />
+                    Login
+                  </Button>
+                )}
+              </div>
+            </div>
 
             <h1 className="text-3xl font-bold text-primary mb-6">Admin Panel</h1>
 
