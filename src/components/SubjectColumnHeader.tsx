@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
-import { Switch } from "./ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -18,7 +17,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
-import { Pencil, Trash2, Plus, Settings, ArrowUp, ArrowDown, Eye, EyeOff } from "lucide-react";
+import { Pencil, Trash2, Plus, ChevronDown, ArrowUp, ArrowDown, Eye, EyeOff } from "lucide-react";
 import { SchoolSubject } from "@/hooks/useSchoolSubjects";
 import { toast } from "sonner";
 
@@ -66,13 +65,17 @@ export const SubjectColumnHeader = ({
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="flex items-center justify-center gap-1 w-full hover:bg-muted/50 rounded px-1 py-0.5 cursor-pointer transition-colors">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-auto p-1 font-semibold text-primary hover:bg-primary/10 w-full justify-center gap-1"
+          >
             <span>{subject.name}</span>
-            <Settings className="h-3 w-3 opacity-50" />
-          </button>
+            <ChevronDown className="h-3 w-3 opacity-70" />
+          </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="center">
-          <DropdownMenuItem onClick={() => setEditOpen(true)}>
+        <DropdownMenuContent align="center" className="w-48">
+          <DropdownMenuItem onClick={() => { setName(subject.name); setAbbreviation(subject.abbreviation); setEditOpen(true); }}>
             <Pencil className="mr-2 h-4 w-4" />
             Edit Subject
           </DropdownMenuItem>
@@ -102,9 +105,9 @@ export const SubjectColumnHeader = ({
               Move Right
             </DropdownMenuItem>
           )}
-          {(canMoveUp || canMoveDown) && <DropdownMenuSeparator />}
+          {(canMoveUp || canMoveDown) && subject.is_custom && <DropdownMenuSeparator />}
           {subject.is_custom && (
-            <DropdownMenuItem onClick={handleDelete} className="text-destructive">
+            <DropdownMenuItem onClick={handleDelete} className="text-destructive focus:text-destructive">
               <Trash2 className="mr-2 h-4 w-4" />
               Delete Subject
             </DropdownMenuItem>
