@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { GraduationCap } from "lucide-react";
+import { GraduationCap, Key, Settings } from "lucide-react";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -166,6 +166,32 @@ const Auth = () => {
             >
               {isLogin ? "Don't have an account? Register" : "Already have an account? Login"}
             </Button>
+
+            <div className="border-t pt-4 mt-4">
+              <p className="text-sm text-muted-foreground text-center mb-3">Admin Access</p>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => navigate("/license-admin")}
+                  disabled={loading}
+                >
+                  <Key className="h-4 w-4 mr-2" />
+                  License Admin
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => navigate("/super-admin")}
+                  disabled={loading}
+                >
+                  <Settings className="h-4 w-4 mr-2" />
+                  Super Admin
+                </Button>
+              </div>
+            </div>
 
             <Button
               type="button"
