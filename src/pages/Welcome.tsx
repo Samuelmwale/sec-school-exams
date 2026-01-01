@@ -56,24 +56,29 @@ const Welcome = () => {
         </div>
       </div>
 
-      {/* Admin links at bottom - discrete */}
-      <div className="py-6 border-t border-border/30 bg-muted/30">
-        <div className="container mx-auto px-4">
-          <div className="flex justify-center gap-6">
-            <button 
+      {/* Admin links at bottom */}
+      <div className="py-8 border-t border-border">
+        <div className="container mx-auto px-4 text-center">
+          <p className="text-muted-foreground mb-4">
+            Don't have an account? <span className="font-semibold text-foreground">Admin</span>
+          </p>
+          <div className="flex justify-center gap-4">
+            <Button 
+              variant="outline"
               onClick={() => navigate("/license-admin")}
-              className="flex items-center gap-2 text-sm text-muted-foreground/70 hover:text-primary transition-colors"
+              className="flex items-center gap-2"
             >
               <Key className="h-4 w-4" />
               License Admin
-            </button>
-            <button 
+            </Button>
+            <Button 
+              variant="outline"
               onClick={() => navigate("/super-admin")}
-              className="flex items-center gap-2 text-sm text-muted-foreground/70 hover:text-primary transition-colors"
+              className="flex items-center gap-2"
             >
               <Settings className="h-4 w-4" />
               Super Admin
-            </button>
+            </Button>
           </div>
         </div>
       </div>
