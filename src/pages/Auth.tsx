@@ -52,7 +52,7 @@ const Auth = () => {
           }
         }
         
-        navigate("/student-portal");
+        navigate("/dashboard");
       } else {
         // Register
         const { data, error } = await supabase.auth.signUp({

@@ -2,6 +2,25 @@ import { supabase } from "@/integrations/supabase/client";
 import { Student } from "@/types/student";
 import { storageHelper } from "./storage";
 
+// Helper to get current user's school_id
+const getCurrentSchoolId = async (): Promise<string | null> => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+
+    const { data: profile } = await supabase
+      .from('profiles' as any)
+      .select('school_id')
+      .eq('id', user.id)
+      .single();
+
+    return (profile as any)?.school_id ?? null;
+  } catch (error) {
+    console.error('Error getting school_id:', error);
+    return null;
+  }
+};
+
 export const dbSync = {
   // Sync localStorage data to database
   async syncToDatabase(): Promise<void> {
@@ -9,16 +28,10 @@ export const dbSync = {
     if (localStudents.length === 0) return;
 
     try {
-      // Identify current user's school
-      let schoolId: string | null = null;
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: profile } = await supabase
-          .from('profiles' as any)
-          .select('school_id')
-          .eq('id', user.id)
-          .single();
-        schoolId = (profile as any)?.school_id ?? null;
+      const schoolId = await getCurrentSchoolId();
+      if (!schoolId) {
+        console.log('No school_id found, skipping sync');
+        return;
       }
 
       // Insert all students (ignore duplicates)
@@ -50,10 +63,22 @@ export const dbSync = {
     }
   },
 
-  // Load students from database
+  // Load students from database - FILTERED BY SCHOOL
   async getStudents(classForm?: string, year?: string, term?: string): Promise<Student[]> {
     try {
-      let query = supabase.from('students').select('*').order('total', { ascending: false });
+      const schoolId = await getCurrentSchoolId();
+      
+      // If no school_id, return empty array (not other schools' data)
+      if (!schoolId) {
+        console.log('No school_id found, returning empty array');
+        return [];
+      }
+
+      let query = supabase
+        .from('students')
+        .select('*')
+        .eq('school_id', schoolId) // CRITICAL: Filter by school
+        .order('total', { ascending: false });
 
       if (classForm) query = query.eq('class_form', classForm);
       if (year) query = query.eq('year', year);
@@ -79,23 +104,16 @@ export const dbSync = {
       }));
     } catch (error) {
       console.error('Failed to load from database:', error);
-      return storageHelper.getStudents();
+      return []; // Return empty instead of localStorage to prevent data leakage
     }
   },
 
   // Save student to database
   async saveStudent(student: Student): Promise<void> {
     try {
-      // Identify current user's school
-      let schoolId: string | null = null;
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: profile } = await supabase
-          .from('profiles' as any)
-          .select('school_id')
-          .eq('id', user.id)
-          .single();
-        schoolId = (profile as any)?.school_id ?? null;
+      const schoolId = await getCurrentSchoolId();
+      if (!schoolId) {
+        throw new Error('No school associated with user');
       }
 
       const { error } = await supabase.from('students').upsert({
@@ -120,16 +138,22 @@ export const dbSync = {
     }
   },
 
-  // Delete student from database
+  // Delete student from database - FILTERED BY SCHOOL
   async deleteStudent(studentId: string, classForm: string, year: string, term: string): Promise<void> {
     try {
+      const schoolId = await getCurrentSchoolId();
+      if (!schoolId) {
+        throw new Error('No school associated with user');
+      }
+
       const { error } = await supabase
         .from('students')
         .delete()
         .eq('student_id', studentId)
         .eq('class_form', classForm)
         .eq('year', year)
-        .eq('term', term);
+        .eq('term', term)
+        .eq('school_id', schoolId); // Ensure only delete own school's data
 
       if (error) throw error;
     } catch (error) {
@@ -138,15 +162,21 @@ export const dbSync = {
     }
   },
 
-  // Clear all students for a class/year/term
+  // Clear all students for a class/year/term - FILTERED BY SCHOOL
   async clearClass(classForm: string, year: string, term: string): Promise<void> {
     try {
+      const schoolId = await getCurrentSchoolId();
+      if (!schoolId) {
+        throw new Error('No school associated with user');
+      }
+
       const { error } = await supabase
         .from('students')
         .delete()
         .eq('class_form', classForm)
         .eq('year', year)
-        .eq('term', term);
+        .eq('term', term)
+        .eq('school_id', schoolId); // Ensure only delete own school's data
 
       if (error) throw error;
     } catch (error) {

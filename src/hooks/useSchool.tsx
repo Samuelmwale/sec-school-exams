@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
 
 interface School {
   id: string;
@@ -17,7 +16,6 @@ interface School {
 export const useSchool = () => {
   const [school, setSchool] = useState<School | null>(null);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
 
   useEffect(() => {
     checkSchool();
@@ -28,7 +26,8 @@ export const useSchool = () => {
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
-        navigate("/auth");
+        // Don't redirect, just set loading to false
+        setLoading(false);
         return;
       }
 
@@ -40,7 +39,8 @@ export const useSchool = () => {
         .single() as any;
 
       if (!profile?.school_id) {
-        navigate("/school-registration");
+        // Don't redirect, let SystemProtection handle it
+        setLoading(false);
         return;
       }
 
@@ -52,7 +52,8 @@ export const useSchool = () => {
         .single() as any;
 
       if (error || !schoolData) {
-        navigate("/school-registration");
+        // Don't redirect, let SystemProtection handle it
+        setLoading(false);
         return;
       }
 
