@@ -91,12 +91,6 @@ const Dashboard = () => {
 
       setSchool(schoolData);
 
-      // Repair missing school_id on existing student records (one-time fix)
-      await supabase
-        .from('students' as any)
-        .update({ school_id: profile.school_id })
-        .is('school_id', null);
-
       // Get students filtered by year and term
       const { data: students, error } = await supabase
         .from('students' as any)
