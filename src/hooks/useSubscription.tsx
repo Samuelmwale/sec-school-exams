@@ -42,9 +42,11 @@ export const useSubscription = () => {
         if (school.subscription_expiry) {
           const expiry = new Date(school.subscription_expiry);
           setExpiryDate(expiry);
-          setIsActive(expiry >= new Date() && school.is_active);
+          // Reactivation must be based on the CURRENT expiry date (some schools may have stale is_active flags)
+          setIsActive(expiry >= new Date());
         } else {
-          setIsActive(school.is_active);
+          setExpiryDate(null);
+          setIsActive(!!school.is_active);
         }
       }
     } catch (error) {
