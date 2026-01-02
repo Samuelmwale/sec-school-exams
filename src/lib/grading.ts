@@ -127,33 +127,65 @@ export const determineStatus = (marks: SubjectMarks): "PASS" | "FAIL" => {
 
 export const calculateRanks = (students: Student[]): Student[] => {
   // Recalculate totals and pass metrics for all students
-  const studentsWithMetrics = students.map(s => ({
-    ...s,
-    total: calculateTotal(s.marks),
-    _passCount: calculateBest6PassCount(s.marks),
-    _englishPassed: (typeof s.marks.eng === 'number') && s.marks.eng >= PASS_MARK,
-  }));
+  // Best 6 = English (compulsory) + best 5 other subjects
+  const studentsWithMetrics = students.map(s => {
+    const englishMark = typeof s.marks.eng === 'number' ? s.marks.eng : 0;
+    const englishPassed = (typeof s.marks.eng === 'number') && s.marks.eng >= PASS_MARK;
+    const total = calculateTotal(s.marks); // Already calculates best 6 with English compulsory
+    const passCount = calculateBest6PassCount(s.marks);
+    const average = calculateAverage(s.marks);
+    
+    return {
+      ...s,
+      total,
+      _passCount: passCount,
+      _englishPassed: englishPassed,
+      _englishMark: englishMark,
+      _average: average,
+    };
+  });
   
-  // Sort: English passed first, then by pass count (best 6 incl. English), then by total
+  // Sort by Best 6 total (descending), with tie-breaking rules:
+  // 1. Higher English score ranks higher
+  // 2. Higher overall average ranks higher
+  // 3. If still tied, same position (handled by ranking logic)
   const sorted = [...studentsWithMetrics].sort((a, b) => {
-    if (a._englishPassed !== b._englishPassed) return Number(b._englishPassed) - Number(a._englishPassed);
-    if (a._passCount !== b._passCount) return b._passCount - a._passCount;
-    return b.total - a.total;
+    // Primary: Best 6 total (descending)
+    if (a.total !== b.total) return b.total - a.total;
+    
+    // Tie-breaker 1: Higher English score
+    if (a._englishMark !== b._englishMark) return b._englishMark - a._englishMark;
+    
+    // Tie-breaker 2: Higher overall average
+    if (a._average !== b._average) return b._average - a._average;
+    
+    // If still tied, they get the same position
+    return 0;
   });
 
-  // Dense ranking based on the same metrics
+  // Assign ranks - same position for tied students
   let currentRank = 1;
-  let prev = { _englishPassed: undefined as any, _passCount: -1, total: -1 };
+  let prevTotal = -1;
+  let prevEnglish = -1;
+  let prevAverage = -1;
 
   sorted.forEach((student, index) => {
-    if (student._englishPassed !== prev._englishPassed || student._passCount !== prev._passCount || student.total !== prev.total) {
+    // Check if this student differs from previous in any ranking criteria
+    if (student.total !== prevTotal || 
+        student._englishMark !== prevEnglish || 
+        student._average !== prevAverage) {
       currentRank = index + 1;
-      prev = { _englishPassed: student._englishPassed, _passCount: student._passCount, total: student.total };
+      prevTotal = student.total;
+      prevEnglish = student._englishMark;
+      prevAverage = student._average;
     }
     student.rank = currentRank;
-    // Clean up temporary fields if necessary
+    
+    // Clean up temporary fields
     delete (student as any)._passCount;
     delete (student as any)._englishPassed;
+    delete (student as any)._englishMark;
+    delete (student as any)._average;
   });
 
   return sorted as Student[];

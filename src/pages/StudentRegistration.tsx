@@ -76,14 +76,14 @@ export default function StudentRegistration() {
         return;
       }
 
-      // Check school subscription
-      if (school.subscription_expiry) {
-        const expiry = new Date(school.subscription_expiry);
-        if (expiry < new Date()) {
-          toast.error("School subscription has expired. Contact school administration.");
-          setLoading(false);
-          return;
-        }
+      // Check school subscription - check BOTH is_active flag and expiry date
+      const isSubscriptionActive = school.is_active && 
+        (!school.subscription_expiry || new Date(school.subscription_expiry) >= new Date());
+      
+      if (!isSubscriptionActive) {
+        toast.error("School subscription has expired. Contact school administration.");
+        setLoading(false);
+        return;
       }
 
       // Store student and school info in session

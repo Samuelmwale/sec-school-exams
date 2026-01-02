@@ -42,7 +42,18 @@ export const SystemProtection = ({ children }: SystemProtectionProps) => {
           p_school_id: school.id,
         });
 
-      if (error) throw error;
+      if (error) {
+        // Parse the error message for user-friendly display
+        const errorMessage = error.message || "";
+        if (errorMessage.includes("already been used")) {
+          toast.error("This license code has already been used by another school. Please contact Mr Mwale for a new code.");
+        } else if (errorMessage.includes("Invalid license")) {
+          toast.error("Invalid license code. Please check the code and try again.");
+        } else {
+          toast.error(errorMessage || "Failed to activate license code");
+        }
+        return;
+      }
 
       if (data) {
         toast.success("License activated successfully! Your subscription has been renewed.");
@@ -51,11 +62,16 @@ export const SystemProtection = ({ children }: SystemProtectionProps) => {
         // Reload to update subscription status
         window.location.reload();
       } else {
-        toast.error("Invalid or already used license code");
+        toast.error("Invalid or already used license code. Please contact Mr Mwale.");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error activating license:", error);
-      toast.error("Failed to activate license code");
+      const errorMessage = error?.message || "";
+      if (errorMessage.includes("already been used")) {
+        toast.error("This license code has already been used by another school");
+      } else {
+        toast.error("Failed to activate license code. Please try again.");
+      }
     } finally {
       setActivating(false);
     }
