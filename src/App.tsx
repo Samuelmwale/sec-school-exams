@@ -18,6 +18,10 @@ import FeesAdmin from "./pages/FeesAdmin";
 import SchoolRegistration from "./pages/SchoolRegistration";
 import LicenseGenerator from "./pages/LicenseGenerator";
 import SuperAdminDashboard from "./pages/SuperAdminDashboard";
+import PayrollAdmin from "./pages/PayrollAdmin";
+import FinanceAdmin from "./pages/FinanceAdmin";
+import AuditLog from "./pages/AuditLog";
+import TeacherPortal from "./pages/TeacherPortal";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -43,6 +47,10 @@ const App = () => (
           <Route path="/school-registration" element={<SchoolRegistration />} />
           <Route path="/license-admin" element={<LicenseGenerator />} />
           <Route path="/super-admin" element={<SuperAdminDashboard />} />
+          <Route path="/payroll" element={<PayrollAdmin />} />
+          <Route path="/finance" element={<FinanceAdmin />} />
+          <Route path="/audit-log" element={<AuditLog />} />
+          <Route path="/teacher-portal" element={<TeacherPortal />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
