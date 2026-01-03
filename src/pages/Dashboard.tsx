@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { BarChart3, Users, FileText, Settings as SettingsIcon, AlertCircle, DollarSign } from "lucide-react";
+import { BarChart3, Users, FileText, Settings as SettingsIcon, AlertCircle, DollarSign, Wallet, Activity, GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -340,6 +340,36 @@ const Dashboard = () => {
             </CardContent>
           </Card>
 
+          <Card className="hover:shadow-lg transition-all hover-scale cursor-pointer" onClick={() => navigate("/payroll")}>
+            <CardHeader>
+              <Wallet className="h-12 w-12 text-green-600 mb-4" />
+              <CardTitle>Payroll</CardTitle>
+              <CardDescription>
+                Manage employees and salary payments
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button className="w-full" disabled={!isActive}>
+                Manage Payroll
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-lg transition-all hover-scale cursor-pointer" onClick={() => navigate("/finance")}>
+            <CardHeader>
+              <BarChart3 className="h-12 w-12 text-blue-600 mb-4" />
+              <CardTitle>Finance</CardTitle>
+              <CardDescription>
+                Track income, expenses, and documents
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button className="w-full" disabled={!isActive}>
+                Manage Finance
+              </Button>
+            </CardContent>
+          </Card>
+
           <Card className="hover:shadow-lg transition-all hover-scale cursor-pointer" onClick={() => navigate("/settings")}>
             <CardHeader>
               <SettingsIcon className="h-12 w-12 text-accent mb-4" />
@@ -366,6 +396,36 @@ const Dashboard = () => {
             <CardContent>
               <Button className="w-full">
                 Student Access
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-lg transition-all hover-scale cursor-pointer" onClick={() => navigate("/teacher-portal")}>
+            <CardHeader>
+              <GraduationCap className="h-12 w-12 text-purple-600 mb-4" />
+              <CardTitle>Teacher Portal</CardTitle>
+              <CardDescription>
+                Teachers can view periods and salary
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button className="w-full">
+                Teacher Access
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-lg transition-all hover-scale cursor-pointer" onClick={() => navigate("/audit-log")}>
+            <CardHeader>
+              <Activity className="h-12 w-12 text-orange-600 mb-4" />
+              <CardTitle>Event Manager</CardTitle>
+              <CardDescription>
+                View system activity and audit logs
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button variant="outline" className="w-full">
+                View Logs
               </Button>
             </CardContent>
           </Card>
