@@ -1202,6 +1202,32 @@ export type Database = {
         Args: { p_class_form: string; p_year: string }
         Returns: string
       }
+      get_all_schools_admin: {
+        Args: never
+        Returns: {
+          address: string
+          block_reason: string | null
+          blocked_permanently: boolean | null
+          blocked_until: string | null
+          center_number: string
+          created_at: string | null
+          district_name: string | null
+          division_name: string | null
+          id: string
+          is_active: boolean
+          last_active_at: string | null
+          school_name: string
+          subscription_expiry: string | null
+          updated_at: string | null
+          zone_name: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "schools"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       get_school_public: {
         Args: { p_school_id: string }
         Returns: {

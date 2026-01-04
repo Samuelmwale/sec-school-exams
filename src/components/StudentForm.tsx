@@ -19,7 +19,7 @@ interface StudentFormProps {
 
 export const StudentForm = ({ open, onClose, onSave, student }: StudentFormProps) => {
   const academicYears = generateAcademicYears();
-  const { activeSubjects } = useSchoolSubjects();
+  const { activeSubjects, loading: subjectsLoading } = useSchoolSubjects();
   
   const [formData, setFormData] = useState({
     name: "",
@@ -34,9 +34,9 @@ export const StudentForm = ({ open, onClose, onSave, student }: StudentFormProps
   // Reset form when student changes or dialog opens
   useEffect(() => {
     if (open) {
-      const initialMarks: any = {};
+      const initialMarks: SubjectMarks = {};
       activeSubjects.forEach(subject => {
-        initialMarks[subject.abbreviation] = student?.marks?.[subject.abbreviation as keyof SubjectMarks] ?? "AB";
+        initialMarks[subject.abbreviation] = student?.marks?.[subject.abbreviation] ?? "AB";
       });
       
       setFormData({
@@ -46,7 +46,7 @@ export const StudentForm = ({ open, onClose, onSave, student }: StudentFormProps
         classForm: student?.classForm || "Form1",
         year: student?.year || getCurrentAcademicYear(),
         term: student?.term || "Term1",
-        marks: initialMarks as SubjectMarks,
+        marks: initialMarks,
       });
     }
   }, [open, student, activeSubjects]);
@@ -65,10 +65,10 @@ export const StudentForm = ({ open, onClose, onSave, student }: StudentFormProps
   const handleMarkChange = (subjectAbbr: string, value: string) => {
     const marks = { ...formData.marks };
     if (value === "" || value === "AB" || value.toLowerCase() === "ab") {
-      (marks as any)[subjectAbbr] = "AB";
+      marks[subjectAbbr] = "AB";
     } else {
       const num = parseFloat(value);
-      (marks as any)[subjectAbbr] = isNaN(num) ? "AB" : num;
+      marks[subjectAbbr] = isNaN(num) ? "AB" : num;
     }
     setFormData({ ...formData, marks });
   };
@@ -89,8 +89,18 @@ export const StudentForm = ({ open, onClose, onSave, student }: StudentFormProps
             <Input
               id="name"
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value.toUpperCase() })}
               placeholder="Enter full name"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="student_id">Student ID (Optional)</Label>
+            <Input
+              id="student_id"
+              value={formData.student_id}
+              onChange={(e) => setFormData({ ...formData, student_id: e.target.value.trim() })}
+              placeholder="e.g., 2025-0001"
             />
           </div>
 
@@ -154,26 +164,34 @@ export const StudentForm = ({ open, onClose, onSave, student }: StudentFormProps
 
           <div className="col-span-2 border-t pt-4 mt-2">
             <h3 className="font-semibold mb-4">Subject Marks</h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {activeSubjects.map((subject) => (
-                <div key={subject.id}>
-                  <Label htmlFor={subject.abbreviation}>{subject.name}</Label>
-                  <Input
-                    id={subject.abbreviation}
-                    type="text"
-                    value={(formData.marks as any)[subject.abbreviation] === "AB" ? "AB" : (formData.marks as any)[subject.abbreviation] ?? ""}
-                    onChange={(e) => handleMarkChange(subject.abbreviation, e.target.value)}
-                    placeholder="0-100 or AB"
-                  />
-                </div>
-              ))}
-            </div>
+            {subjectsLoading ? (
+              <p className="text-muted-foreground">Loading subjects...</p>
+            ) : activeSubjects.length === 0 ? (
+              <p className="text-muted-foreground">No subjects configured. Please add subjects in Settings first.</p>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {activeSubjects.map((subject) => (
+                  <div key={subject.id}>
+                    <Label htmlFor={subject.abbreviation}>{subject.name}</Label>
+                    <Input
+                      id={subject.abbreviation}
+                      type="text"
+                      value={formData.marks[subject.abbreviation] === "AB" ? "AB" : formData.marks[subject.abbreviation] ?? ""}
+                      onChange={(e) => handleMarkChange(subject.abbreviation, e.target.value)}
+                      placeholder="0-100 or AB"
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={handleSubmit}>Save Student</Button>
+          <Button onClick={handleSubmit} disabled={subjectsLoading || activeSubjects.length === 0}>
+            {student ? "Update Student" : "Save Student"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

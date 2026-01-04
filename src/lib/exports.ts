@@ -5,9 +5,38 @@ import { Document, Packer, Paragraph, Table, TableCell, TableRow, TextRun, Align
 import { saveAs } from "file-saver";
 import JSZip from "jszip";
 import { Student, SchoolSettings } from "@/types/student";
-import { SUBJECTS, SubjectKey } from "./grading";
 
-export const exportToExcel = (students: Student[], filename: string) => {
+// Dynamic subject export - uses school subjects from the student data
+const getSubjectsFromStudent = (student: Student): { key: string; label: string }[] => {
+  const subjects: { key: string; label: string }[] = [];
+  if (student.marks) {
+    Object.keys(student.marks).forEach(key => {
+      // Convert abbreviation to readable label
+      const labelMap: Record<string, string> = {
+        eng: "English",
+        phy: "Physics",
+        agr: "Agriculture",
+        bio: "Biology",
+        che: "Chemistry",
+        chi: "Chichewa",
+        geo: "Geography",
+        mat: "Mathematics",
+        soc: "Social Studies",
+        his: "History",
+        bk: "Bible Knowledge",
+      };
+      subjects.push({ key, label: labelMap[key] || key.toUpperCase() });
+    });
+  }
+  return subjects;
+};
+
+export const exportToExcel = (students: Student[], filename: string, schoolSubjects?: { abbreviation: string; name: string }[]) => {
+  // Use school subjects if provided, otherwise extract from first student
+  const subjectList = schoolSubjects 
+    ? schoolSubjects.map(s => ({ key: s.abbreviation, label: s.name }))
+    : students.length > 0 ? getSubjectsFromStudent(students[0]) : [];
+
   const data = students.map((s) => {
     const row: any = {
       Name: s.name,
@@ -17,12 +46,12 @@ export const exportToExcel = (students: Student[], filename: string) => {
       Term: s.term,
     };
 
-    Object.entries(SUBJECTS).forEach(([key, label]) => {
-      const subjectKey = key as SubjectKey;
-      const mark = s.marks[subjectKey];
-      row[label] = mark === "AB" ? "AB" : mark;
-      row[`${label} Grade`] = s.grades[subjectKey].grade;
-      row[`${label} Pos`] = s.grades[subjectKey].pos || "-";
+    subjectList.forEach(({ key, label }) => {
+      const mark = s.marks[key as keyof typeof s.marks];
+      const grade = s.grades[key as keyof typeof s.grades];
+      row[label] = mark === "AB" ? "AB" : mark ?? "-";
+      row[`${label} Grade`] = grade?.grade ?? "-";
+      row[`${label} Pos`] = grade?.pos || "-";
     });
 
     row.Total = s.total;
@@ -39,11 +68,16 @@ export const exportToExcel = (students: Student[], filename: string) => {
   XLSX.writeFile(wb, filename);
 };
 
-export const exportToPDF = (students: Student[], settings: SchoolSettings) => {
+export const exportToPDF = (students: Student[], settings: SchoolSettings, schoolSubjects?: { abbreviation: string; name: string }[]) => {
   const doc = new jsPDF();
 
   students.forEach((student, index) => {
     if (index > 0) doc.addPage();
+
+    // Use school subjects if provided, otherwise extract from student
+    const subjectList = schoolSubjects 
+      ? schoolSubjects.map(s => ({ key: s.abbreviation, label: s.name }))
+      : getSubjectsFromStudent(student);
 
     // Header
     doc.setFontSize(16);
@@ -66,17 +100,16 @@ export const exportToPDF = (students: Student[], settings: SchoolSettings) => {
     doc.text(`Year: ${student.year}`, 120, 42);
     doc.text(`Term: ${student.term}`, 170, 35);
 
-    // Results table
-    const tableData = Object.entries(SUBJECTS).map(([key, label]) => {
-      const subjectKey = key as SubjectKey;
-      const mark = student.marks[subjectKey];
-      const grade = student.grades[subjectKey];
+    // Results table - use dynamic subjects
+    const tableData = subjectList.map(({ key, label }) => {
+      const mark = student.marks[key as keyof typeof student.marks];
+      const grade = student.grades[key as keyof typeof student.grades];
       return [
         label,
-        mark === "AB" ? "AB" : mark.toString(),
-        grade.grade,
-        grade.pos || "-",
-        grade.remark,
+        mark === "AB" ? "AB" : (mark?.toString() ?? "-"),
+        grade?.grade ?? "-",
+        grade?.pos || "-",
+        grade?.remark ?? "-",
       ];
     });
 
@@ -140,8 +173,13 @@ export const exportToPDF = (students: Student[], settings: SchoolSettings) => {
   window.open(url, "_blank");
 };
 
-export const exportToWord = async (students: Student[], settings: SchoolSettings) => {
+export const exportToWord = async (students: Student[], settings: SchoolSettings, schoolSubjects?: { abbreviation: string; name: string }[]) => {
   const sections = students.map((student) => {
+    // Use school subjects if provided, otherwise extract from student
+    const subjectList = schoolSubjects 
+      ? schoolSubjects.map(s => ({ key: s.abbreviation, label: s.name }))
+      : getSubjectsFromStudent(student);
+
     const tableRows = [
       new TableRow({
         children: [
@@ -154,19 +192,18 @@ export const exportToWord = async (students: Student[], settings: SchoolSettings
       }),
     ];
 
-    Object.entries(SUBJECTS).forEach(([key, label]) => {
-      const subjectKey = key as SubjectKey;
-      const mark = student.marks[subjectKey];
-      const grade = student.grades[subjectKey];
+    subjectList.forEach(({ key, label }) => {
+      const mark = student.marks[key as keyof typeof student.marks];
+      const grade = student.grades[key as keyof typeof student.grades];
 
       tableRows.push(
         new TableRow({
           children: [
             new TableCell({ children: [new Paragraph(label)] }),
-            new TableCell({ children: [new Paragraph(mark === "AB" ? "AB" : mark.toString())] }),
-            new TableCell({ children: [new Paragraph(grade.grade)] }),
-            new TableCell({ children: [new Paragraph(grade.pos ? grade.pos.toString() : "-")] }),
-            new TableCell({ children: [new Paragraph(grade.remark)] }),
+            new TableCell({ children: [new Paragraph(mark === "AB" ? "AB" : (mark?.toString() ?? "-"))] }),
+            new TableCell({ children: [new Paragraph(grade?.grade ?? "-")] }),
+            new TableCell({ children: [new Paragraph(grade?.pos ? grade.pos.toString() : "-")] }),
+            new TableCell({ children: [new Paragraph(grade?.remark ?? "-")] }),
           ],
         })
       );
@@ -260,8 +297,13 @@ export const exportToWord = async (students: Student[], settings: SchoolSettings
   window.open(url, "_blank");
 };
 
-export const exportAllToZip = async (students: Student[], settings: SchoolSettings) => {
+export const exportAllToZip = async (students: Student[], settings: SchoolSettings, schoolSubjects?: { abbreviation: string; name: string }[]) => {
   const zip = new JSZip();
+
+  // Use school subjects if provided, otherwise extract from first student
+  const subjectList = schoolSubjects 
+    ? schoolSubjects.map(s => ({ key: s.abbreviation, label: s.name }))
+    : students.length > 0 ? getSubjectsFromStudent(students[0]) : [];
 
   // Add Excel file
   const excelData = students.map((s) => {
@@ -273,12 +315,12 @@ export const exportAllToZip = async (students: Student[], settings: SchoolSettin
       Term: s.term,
     };
 
-    Object.entries(SUBJECTS).forEach(([key, label]) => {
-      const subjectKey = key as SubjectKey;
-      const mark = s.marks[subjectKey];
-      row[label] = mark === "AB" ? "AB" : mark;
-      row[`${label} Grade`] = s.grades[subjectKey].grade;
-      row[`${label} Pos`] = s.grades[subjectKey].pos || "-";
+    subjectList.forEach(({ key, label }) => {
+      const mark = s.marks[key as keyof typeof s.marks];
+      const grade = s.grades[key as keyof typeof s.grades];
+      row[label] = mark === "AB" ? "AB" : mark ?? "-";
+      row[`${label} Grade`] = grade?.grade ?? "-";
+      row[`${label} Pos`] = grade?.pos || "-";
     });
 
     row.Total = s.total;
@@ -297,6 +339,11 @@ export const exportAllToZip = async (students: Student[], settings: SchoolSettin
 
   // Add Word reports
   for (const student of students) {
+    // Use school subjects for each student
+    const studentSubjects = schoolSubjects 
+      ? schoolSubjects.map(s => ({ key: s.abbreviation, label: s.name }))
+      : getSubjectsFromStudent(student);
+
     const tableRows = [
       new TableRow({
         children: [
@@ -309,19 +356,18 @@ export const exportAllToZip = async (students: Student[], settings: SchoolSettin
       }),
     ];
 
-    Object.entries(SUBJECTS).forEach(([key, label]) => {
-      const subjectKey = key as SubjectKey;
-      const mark = student.marks[subjectKey];
-      const grade = student.grades[subjectKey];
+    studentSubjects.forEach(({ key, label }) => {
+      const mark = student.marks[key as keyof typeof student.marks];
+      const grade = student.grades[key as keyof typeof student.grades];
 
       tableRows.push(
         new TableRow({
           children: [
             new TableCell({ children: [new Paragraph(label)] }),
-            new TableCell({ children: [new Paragraph(mark === "AB" ? "AB" : mark.toString())] }),
-            new TableCell({ children: [new Paragraph(grade.grade)] }),
-            new TableCell({ children: [new Paragraph(grade.pos ? grade.pos.toString() : "-")] }),
-            new TableCell({ children: [new Paragraph(grade.remark)] }),
+            new TableCell({ children: [new Paragraph(mark === "AB" ? "AB" : (mark?.toString() ?? "-"))] }),
+            new TableCell({ children: [new Paragraph(grade?.grade ?? "-")] }),
+            new TableCell({ children: [new Paragraph(grade?.pos ? grade.pos.toString() : "-")] }),
+            new TableCell({ children: [new Paragraph(grade?.remark ?? "-")] }),
           ],
         })
       );

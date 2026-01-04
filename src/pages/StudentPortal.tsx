@@ -6,12 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { SUBJECTS, SubjectKey, CLASS_FORMS, TERMS } from "@/lib/grading";
+import { CLASS_FORMS, TERMS } from "@/lib/grading";
 import { exportToPDF, exportToWord } from "@/lib/exports";
 import { Student } from "@/types/student";
 import { Download, FileText, LogOut, DollarSign, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
-// Students can access portal even if subscription expired
 import { generateAcademicYears } from "@/lib/academic-years";
 import { AnnouncementBanner } from "@/components/AnnouncementBanner";
 
@@ -31,6 +30,14 @@ interface School {
   address: string;
 }
 
+interface SchoolSubject {
+  id: string;
+  name: string;
+  abbreviation: string;
+  display_order: number;
+  is_active: boolean;
+}
+
 const StudentPortal = () => {
   const navigate = useNavigate();
   const [student, setStudent] = useState<any>(null);
@@ -41,6 +48,7 @@ const StudentPortal = () => {
   const [selectedYear, setSelectedYear] = useState<string>("all");
   const [selectedTerm, setSelectedTerm] = useState<string>("all");
   const [loading, setLoading] = useState(true);
+  const [schoolSubjects, setSchoolSubjects] = useState<SchoolSubject[]>([]);
 
   useEffect(() => {
     checkAuth();
@@ -62,6 +70,18 @@ const StudentPortal = () => {
       
       setStudent(studentData);
       setSchool(schoolData);
+
+      // Load school-specific subjects
+      const { data: subjects } = await supabase
+        .from('school_subjects' as any)
+        .select('*')
+        .eq('school_id', schoolData.id)
+        .eq('is_active', true)
+        .order('display_order', { ascending: true }) as any;
+
+      if (subjects && subjects.length > 0) {
+        setSchoolSubjects(subjects);
+      }
 
       // Get student records from database
       const { data: students } = await supabase
@@ -140,6 +160,36 @@ const StudentPortal = () => {
     navigate("/student-registration");
   };
 
+  // Get subjects to display - from school config or from student marks
+  const getDisplaySubjects = (record: Student) => {
+    // If we have school subjects, use them (in order)
+    if (schoolSubjects.length > 0) {
+      return schoolSubjects.map(s => ({
+        key: s.abbreviation,
+        name: s.name,
+      }));
+    }
+    
+    // Fallback: extract from student marks
+    const labelMap: Record<string, string> = {
+      eng: "English",
+      phy: "Physics",
+      agr: "Agriculture",
+      bio: "Biology",
+      che: "Chemistry",
+      chi: "Chichewa",
+      geo: "Geography",
+      mat: "Mathematics",
+      soc: "Social Studies",
+      his: "History",
+      bk: "Bible Knowledge",
+    };
+    
+    return Object.keys(record.marks).map(key => ({
+      key,
+      name: labelMap[key] || key.toUpperCase(),
+    }));
+  };
 
   const handleDownloadPDF = () => {
     const recordsToExport = getFilteredRecords();
@@ -151,7 +201,10 @@ const StudentPortal = () => {
         subscriptionDays: 30,
         adminKey: "1111"
       };
-      exportToPDF(recordsToExport, settings);
+      const exportSubjects = schoolSubjects.length > 0 
+        ? schoolSubjects.map(s => ({ abbreviation: s.abbreviation, name: s.name }))
+        : undefined;
+      exportToPDF(recordsToExport, settings, exportSubjects);
       toast.success("PDF downloaded successfully!");
     }
   };
@@ -166,7 +219,10 @@ const StudentPortal = () => {
         subscriptionDays: 30,
         adminKey: "1111"
       };
-      await exportToWord(recordsToExport, settings);
+      const exportSubjects = schoolSubjects.length > 0 
+        ? schoolSubjects.map(s => ({ abbreviation: s.abbreviation, name: s.name }))
+        : undefined;
+      await exportToWord(recordsToExport, settings, exportSubjects);
       toast.success("Word document opened!");
     }
   };
@@ -495,51 +551,54 @@ const StudentPortal = () => {
           </Card>
         ) : (
           <div className="space-y-6">
-            {filteredRecords.map((record, idx) => (
-            <Card key={idx}>
-              <CardHeader>
-                <CardTitle>
-                  {record.classForm} - {record.term} {record.year}
-                </CardTitle>
-                <div className="flex gap-4 text-sm">
-                  <span>Total: <strong>{record.total}</strong></span>
-                  <span>Position: <strong>{record.rank}</strong></span>
-                  <span className={record.status === "PASS" ? "text-secondary font-semibold" : "text-destructive font-semibold"}>
-                    Status: {record.status}
-                  </span>
-                </div>
-              </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Subject</TableHead>
-                        <TableHead>Mark</TableHead>
-                        <TableHead>Grade</TableHead>
-                        <TableHead>Position</TableHead>
-                        <TableHead>Remark</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {Object.entries(SUBJECTS).map(([key, name]) => {
-                        const subjectKey = key as SubjectKey;
-                        const mark = record.marks[subjectKey];
-                        const grade = record.grades[subjectKey];
-                        return (
-                          <TableRow key={key}>
-                            <TableCell className="font-medium">{name}</TableCell>
-                            <TableCell>{mark === "AB" ? "AB" : mark}</TableCell>
-                            <TableCell>{grade.grade}</TableCell>
-                            <TableCell>{grade.pos || "-"}</TableCell>
-                            <TableCell>{grade.remark}</TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            ))}
+            {filteredRecords.map((record, idx) => {
+              const displaySubjects = getDisplaySubjects(record);
+              return (
+                <Card key={idx}>
+                  <CardHeader>
+                    <CardTitle>
+                      {record.classForm} - {record.term} {record.year}
+                    </CardTitle>
+                    <div className="flex gap-4 text-sm">
+                      <span>Total: <strong>{record.total}</strong></span>
+                      <span>Position: <strong>{record.rank}</strong></span>
+                      <span className={record.status === "PASS" ? "text-secondary font-semibold" : "text-destructive font-semibold"}>
+                        Status: {record.status}
+                      </span>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Subject</TableHead>
+                          <TableHead>Mark</TableHead>
+                          <TableHead>Grade</TableHead>
+                          <TableHead>Position</TableHead>
+                          <TableHead>Remark</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {displaySubjects.map(({ key, name }) => {
+                          const mark = record.marks[key as keyof typeof record.marks];
+                          const grade = record.grades[key as keyof typeof record.grades];
+                          if (mark === undefined) return null; // Skip subjects not in this record
+                          return (
+                            <TableRow key={key}>
+                              <TableCell className="font-medium">{name}</TableCell>
+                              <TableCell>{mark === "AB" ? "AB" : mark}</TableCell>
+                              <TableCell>{grade?.grade ?? "-"}</TableCell>
+                              <TableCell>{grade?.pos || "-"}</TableCell>
+                              <TableCell>{grade?.remark ?? "-"}</TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         )}
       </div>
