@@ -3,6 +3,7 @@ import { Student, SubjectMarks, SubjectGrades, Grade, ClassForm, Term } from "@/
 export const CLASS_FORMS = ["Form1", "Form2", "Form3", "Form4"] as const;
 export const TERMS = ["Term1", "Term2", "Term3"] as const;
 
+// Default subjects - can be customized per school
 export const SUBJECTS = {
   eng: "English",
   phy: "Physics",
@@ -45,6 +46,7 @@ const gradeForm34 = (mark: number | "AB"): { grade: Grade; remark: string } => {
   return { grade: "9", remark: "Fail" };
 };
 
+// Dynamic grading - works with any subjects in the marks object
 export const calculateGrades = (
   marks: SubjectMarks,
   classForm: ClassForm
@@ -53,11 +55,10 @@ export const calculateGrades = (
   const gradeFunc = isForm12 ? gradeForm12 : gradeForm34;
 
   const grades: any = {};
-  Object.keys(SUBJECTS).forEach((subject) => {
-    const subjectKey = subject as SubjectKey;
-    const mark = marks[subjectKey];
+  Object.keys(marks).forEach((subject) => {
+    const mark = marks[subject as keyof SubjectMarks];
     const { grade, remark } = gradeFunc(mark);
-    grades[subjectKey] = { grade, pos: 0, remark };
+    grades[subject] = { grade, pos: 0, remark };
   });
 
   return grades as SubjectGrades;
@@ -191,15 +192,19 @@ export const calculateRanks = (students: Student[]): Student[] => {
   return sorted as Student[];
 };
 
+// Dynamic subject positions - works with any subjects
 export const calculateSubjectPositions = (students: Student[]): Student[] => {
-  const subjects = Object.keys(SUBJECTS) as SubjectKey[];
+  // Get all subjects from the first student (all students should have same subjects)
+  if (students.length === 0) return students;
+  
+  const subjects = Object.keys(students[0].marks);
 
   subjects.forEach((subject) => {
     // Get all students with valid marks for this subject
     const withMarks = students
       .map((s, idx) => ({
         student: s,
-        mark: s.marks[subject],
+        mark: s.marks[subject as keyof SubjectMarks],
         originalIndex: idx,
       }))
       .filter((item) => item.mark !== "AB")
@@ -219,13 +224,15 @@ export const calculateSubjectPositions = (students: Student[]): Student[] => {
         currentPos = index + 1;
         previousMark = mark;
       }
-      item.student.grades[subject].pos = currentPos;
+      if (item.student.grades[subject as keyof SubjectGrades]) {
+        item.student.grades[subject as keyof SubjectGrades].pos = currentPos;
+      }
     });
 
     // Set position to 0 for absent students
     students.forEach((s) => {
-      if (s.marks[subject] === "AB") {
-        s.grades[subject].pos = 0;
+      if (s.marks[subject as keyof SubjectMarks] === "AB" && s.grades[subject as keyof SubjectGrades]) {
+        s.grades[subject as keyof SubjectGrades].pos = 0;
       }
     });
   });
@@ -253,14 +260,14 @@ export const processStudentData = (students: Student[]): Student[] => {
 };
 
 export const roundMarks = (marks: SubjectMarks): SubjectMarks => {
-  const rounded: any = {};
+  const rounded: SubjectMarks = {};
   Object.entries(marks).forEach(([key, value]) => {
     // Convert empty, null, undefined, empty string, or "AB" to "AB"
-    if (value === "AB" || value === null || value === undefined || value === "" || value === 0) {
+    if (value === "AB" || value === null || value === undefined || String(value) === "" || value === 0) {
       rounded[key] = "AB";
     } else {
       rounded[key] = Math.round(Number(value));
     }
   });
-  return rounded as SubjectMarks;
+  return rounded;
 };

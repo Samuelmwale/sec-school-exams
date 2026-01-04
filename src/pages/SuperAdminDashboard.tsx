@@ -111,14 +111,29 @@ const SuperAdminDashboard = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      // Load schools
+      // Load ALL schools using RPC to bypass RLS for super admin view
+      // This ensures ALL registered schools are visible regardless of subscription status
       const { data: schoolsData, error: schoolsError } = await supabase
-        .from("schools")
-        .select("*")
-        .order("created_at", { ascending: false });
+        .rpc('get_all_schools_admin') as any;
 
-      if (schoolsError) throw schoolsError;
-      setSchools((schoolsData || []) as School[]);
+      // Fallback to direct query if RPC doesn't exist
+      let allSchools = schoolsData;
+      if (schoolsError) {
+        // Try direct query - the new RLS policy should allow admin access
+        const { data: directSchools, error: directError } = await supabase
+          .from("schools")
+          .select("*")
+          .order("created_at", { ascending: false });
+        
+        if (directError) {
+          console.error("Error loading schools:", directError);
+          allSchools = [];
+        } else {
+          allSchools = directSchools || [];
+        }
+      }
+
+      setSchools((allSchools || []) as School[]);
 
       // Load students with school names
       const { data: studentsData, error: studentsError } = await supabase
@@ -126,12 +141,14 @@ const SuperAdminDashboard = () => {
         .select("*")
         .order("created_at", { ascending: false });
 
-      if (studentsError) throw studentsError;
+      if (studentsError) {
+        console.error("Error loading students:", studentsError);
+      }
       
       // Map school names to students
       const studentsWithSchools = (studentsData || []).map(student => ({
         ...student,
-        school_name: (schoolsData || []).find(s => s.id === student.school_id)?.school_name || "Unknown"
+        school_name: (allSchools || []).find((s: any) => s.id === student.school_id)?.school_name || "Unknown"
       }));
       setStudents(studentsWithSchools as Student[]);
 
@@ -145,7 +162,7 @@ const SuperAdminDashboard = () => {
         const messagesWithSchools = messagesData.map(msg => ({
           ...msg,
           school_name: msg.recipient_school_id 
-            ? (schoolsData || []).find(s => s.id === msg.recipient_school_id)?.school_name 
+            ? (allSchools || []).find((s: any) => s.id === msg.recipient_school_id)?.school_name 
             : "Broadcast"
         }));
         setMessages(messagesWithSchools as Message[]);
@@ -162,7 +179,7 @@ const SuperAdminDashboard = () => {
         const logsWithSchools = logsData.map(log => ({
           ...log,
           school_name: log.school_id 
-            ? (schoolsData || []).find(s => s.id === log.school_id)?.school_name 
+            ? (allSchools || []).find((s: any) => s.id === log.school_id)?.school_name 
             : "Unknown"
         }));
         setActivityLogs(logsWithSchools as ActivityLog[]);

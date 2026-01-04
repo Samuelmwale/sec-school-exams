@@ -128,7 +128,7 @@ const AdminNew = () => {
         marks: Object.fromEntries(
           Object.entries(studentData.marks).map(([key, value]) => [
             key,
-            value === null || value === undefined || value === "" || value === 0 ? "AB" : value
+            value === null || value === undefined || String(value) === "" || value === 0 ? "AB" : value
           ])
         )
       };
