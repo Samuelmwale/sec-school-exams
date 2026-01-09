@@ -21,79 +21,103 @@ export default function StudentRegistration() {
     setLoading(true);
 
     try {
-      // Try Student ID first; fallback to Registration Number (Forms 3-4)
-      const inputId = formData.studentId.trim();
+      const inputId = formData.studentId.trim().toUpperCase();
+      const inputName = formData.name.trim().toUpperCase();
 
-      const [{ data: studentById, error: errById }, { data: regByNum, error: errReg }] = await Promise.all([
-        supabase.from("students").select("*, school_id, year, class_form").eq("student_id", inputId).maybeSingle(),
-        supabase.from("student_registrations").select("*, school_id, year, class_form").eq("registration_number", inputId).maybeSingle(),
-      ]);
+      // Search for student by student_id in students table
+      const { data: studentData, error: studentError } = await supabase
+        .from("students")
+        .select("*")
+        .or(`student_id.ilike.${inputId},student_id.eq.${inputId}`)
+        .maybeSingle();
 
-      let student = studentById || null as any;
-      let schoolId: string | null = (studentById as any)?.school_id || null;
+      if (studentError) {
+        console.error("Student lookup error:", studentError);
+      }
 
-      // If not found in students by ID, try mapping registration -> students
-      if (!student && regByNum) {
-        const reg = regByNum as any;
-        const normalizedName = formData.name.trim();
-        const nameLike = `%${normalizedName.replace(/\s+/g, "%")}%`;
+      let student = studentData as any;
+      let schoolId: string | null = student?.school_id || null;
 
-        const { data: matchStudent } = await supabase
-          .from("students" as any)
-          .select("*, school_id, year, class_form")
-          .ilike("name", nameLike)
-          .eq("year", reg.year)
-          .eq("class_form", reg.class_form)
-          .maybeSingle() as any;
+      // If not found by student_id, try registration_number
+      if (!student) {
+        const { data: regData } = await supabase
+          .from("student_registrations")
+          .select("*")
+          .or(`registration_number.ilike.${inputId},registration_number.eq.${inputId}`)
+          .maybeSingle();
 
-        if (matchStudent) {
-          student = matchStudent;
-          schoolId = (matchStudent as any).school_id || (reg as any).school_id || null;
-        } else {
-          schoolId = (reg as any).school_id || null;
+        if (regData) {
+          schoolId = (regData as any).school_id;
+          
+          // Try to find matching student record
+          const { data: matchStudent } = await supabase
+            .from("students")
+            .select("*")
+            .eq("school_id", schoolId)
+            .ilike("name", `%${inputName.replace(/\s+/g, "%")}%`)
+            .maybeSingle();
+
+          if (matchStudent) {
+            student = matchStudent;
+            schoolId = (matchStudent as any).school_id || schoolId;
+          }
         }
       }
 
       if (!student) {
-        toast.error("Invalid student ID or registration number. Please check your credentials.");
+        toast.error("Student not found. Please check your Student ID and try again.");
         setLoading(false);
         return;
       }
 
-      // Get school info via RPC to bypass RLS for public login
+      // Validate name matches (case-insensitive, partial match)
+      const studentName = (student.name || "").toUpperCase();
+      const searchName = inputName;
+      if (!studentName.includes(searchName) && !searchName.includes(studentName.split(" ")[0])) {
+        toast.error("Name does not match the student ID. Please verify your credentials.");
+        setLoading(false);
+        return;
+      }
+
       if (!schoolId) {
         toast.error("Student record is not linked to a school. Contact administration.");
         setLoading(false);
         return;
       }
+
+      // Get school info via RPC to bypass RLS for public login
       const { data: school, error: schoolError } = await supabase
         .rpc('get_school_public', { p_school_id: schoolId })
         .single();
 
       if (schoolError || !school) {
-        toast.error("School not found");
+        toast.error("School not found. Contact administration.");
         setLoading(false);
         return;
       }
 
-      // Check school subscription - always trust CURRENT expiry date (reactivation support)
+      // Check subscription - ALWAYS check current expiry date (supports reactivation)
       const expiry = school.subscription_expiry ? new Date(school.subscription_expiry) : null;
-      const isSubscriptionActive = expiry ? expiry >= new Date() : !!school.is_active;
+      const now = new Date();
+      const isSubscriptionActive = expiry ? expiry > now : school.is_active === true;
+      
       if (!isSubscriptionActive) {
-        toast.error("School subscription has expired. Contact school administration.");
+        toast.error("School subscription has expired. Contact school administration to reactivate.");
         setLoading(false);
         return;
       }
 
-      // Store student and school info in session
+      // Clear any stale session data and store fresh data
+      sessionStorage.removeItem("student_data");
+      sessionStorage.removeItem("school_data");
       sessionStorage.setItem("student_data", JSON.stringify(student));
       sessionStorage.setItem("school_data", JSON.stringify(school));
       
-      toast.success(`Welcome ${student.name} to ${school.school_name} Student Portal Results Management System`);
+      toast.success(`Welcome ${student.name}! Logging into ${school.school_name} Student Portal...`);
       navigate("/student-portal");
     } catch (error: any) {
-      console.error("Error:", error);
-      toast.error(error.message || "Login failed");
+      console.error("Login error:", error);
+      toast.error(error.message || "Login failed. Please try again.");
     } finally {
       setLoading(false);
     }

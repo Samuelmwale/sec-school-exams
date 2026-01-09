@@ -126,10 +126,25 @@ const Admin = () => {
 
   const handleSave = async (studentData: Omit<Student, "id" | "grades" | "total" | "average" | "rank" | "status">) => {
     try {
+      // Generate student_id if not provided
+      let studentId = (studentData as any).student_id || editStudent?.student_id;
+      if (!studentId) {
+        // Generate: YEAR-XXXX format
+        const existingStudents = await dbSync.getStudents(studentData.classForm, studentData.year, studentData.term);
+        const maxNum = existingStudents
+          .map(s => {
+            const match = s.student_id?.match(/-(\d+)$/);
+            return match ? parseInt(match[1], 10) : 0;
+          })
+          .reduce((max, n) => Math.max(max, n), 0);
+        studentId = `${studentData.year}-${String(maxNum + 1).padStart(4, "0")}`;
+      }
+
       // Create full student object
       const newStudent: Student = {
         ...studentData,
         id: editStudent?.id || Date.now().toString(),
+        student_id: studentId,
         grades: {} as any,
         total: 0,
         average: 0,
@@ -164,9 +179,12 @@ const Admin = () => {
           ? localStudents.map(s => s.id === editStudent.id ? processedStudent : s)
           : [...localStudents, processedStudent];
         storageHelper.saveStudents(updatedLocal);
+
+        toast.success(editStudent ? "Student updated successfully" : `Student added successfully with ID: ${studentId}`);
+      } else {
+        toast.error("Failed to process student data");
       }
 
-      toast.success(editStudent ? "Student updated successfully" : "Student added successfully");
       setShowForm(false);
       setEditStudent(undefined);
       

@@ -89,7 +89,8 @@ export const dbSync = {
       if (error) throw error;
 
       return (data || []).map(s => ({
-        id: s.student_id,
+        id: s.id,
+        student_id: s.student_id || s.id,
         name: s.name,
         sex: s.sex as 'M' | 'F',
         classForm: s.class_form as any,
@@ -117,7 +118,7 @@ export const dbSync = {
       }
 
       const { error } = await supabase.from('students').upsert({
-        student_id: student.id,
+        student_id: student.student_id || student.id,
         name: student.name,
         sex: student.sex,
         class_form: student.classForm,
